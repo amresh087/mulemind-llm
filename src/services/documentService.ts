@@ -117,7 +117,7 @@ export const documentService = {
         documentId: document.id || documentId,
         jobName: 'document-status',
         status: document.status || 'Indexed',
-        payload: document.objectName || document.name || document.status || 'Indexed',
+        payload: document.objectName || document.name || document.status,
         createdAt: document.createdAt ? new Date(document.createdAt).toISOString() : undefined,
         updatedAt: document.updatedAt ? new Date(document.updatedAt).toISOString() : undefined,
       };

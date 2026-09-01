@@ -43,7 +43,7 @@ const MuleTransform = () => {
   const isRecognizedServerStatus = (status?: string) => {
     if (!status) return false;
     const normalized = status.trim().toUpperCase();
-    const canonical = /^(CREATED|UPLOADED|SCANNING|SCAN_COMPLETED|METADATA_PROCESSING|METADATA_COMPLETED|AI_ANALYZING|AI_ANALYSIS_COMPLETED|DOCUMENT_GENRATING|DOCUMENT_COMPLETED|COMPLETED|FAILED|SUBMITTED|EDI_TEXT_TO_EDI_XML|EDI_XML_TO_IDOC_XML|PROCESSING|PENDING|CANCELLED)$/;
+    const canonical = /^(CREATED|UPLOADED|SCANNING|SCAN_COMPLETED|METADATA_PROCESSING|METADATA_COMPLETED|AI_ANALYZING|AI_ANALYSIS_COMPLETED|DOCUMENT_GENRATING|DOCUMENT_COMPLETED|COMPLETED|FAILED|SUBMITTED|PENDING|CANCELLED)$/;
     if (canonical.test(normalized)) return true;
     if (status.includes('=') || status.includes(';')) return false; // metadata
     return /^[A-Z_]+$/.test(normalized);
@@ -89,6 +89,8 @@ const MuleTransform = () => {
   };
 
   const updateJobStatus = async (status: string, payload?: string) => {
+
+  
     if (!submissionState.transformationId) {
       return null;
     }
@@ -210,16 +212,16 @@ const MuleTransform = () => {
       // API: Upload the selected ZIP file to the document service, which will initiate the transformation workflow
       const uploadedDocument = await documentService.upload(documentPayload, file);
 
-      alert('File uploaded successfully. Transformation workflow has started.');
       const documentId = uploadedDocument.id || uploadedDocument.name || 'pending';
       
       // API: Fetch the initial job status immediately after upload to display current workflow stage
       const jobStatus = await documentService.getTransformationJobStatus(documentId);
-      const candidateStatus = jobStatus?.status?.trim() || uploadedDocument.status || 'Created';
+      const candidateStatus = jobStatus?.status?.trim() || uploadedDocument.status;
+    
       const recognized = isRecognizedServerStatus(candidateStatus);
-      const effectiveStatus = recognized ? candidateStatus : (uploadedDocument.status || 'Created');
-
+      const effectiveStatus = recognized ? candidateStatus : (uploadedDocument.status);
       const submittedMessage = 'The upload request was accepted and the transformation workflow has started.';
+     
       setSubmissionState({
         status: 'submitted',
         transformationId: documentId,
@@ -228,6 +230,8 @@ const MuleTransform = () => {
         createdAt: jobStatus?.createdAt || new Date().toISOString(),
         updatedAt: jobStatus?.updatedAt || new Date().toISOString(),
       });
+      // repeated call to updateJobStatus to ensure 
+      // the backend is aware of the current workflow stage and any metadata payload
       await updateJobStatus(effectiveStatus, submittedMessage);
     } catch (err) {
       console.error(err);
