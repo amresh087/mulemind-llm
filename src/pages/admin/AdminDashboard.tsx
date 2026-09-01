@@ -75,32 +75,7 @@ const AdminDashboard = () => {
         </Row>
       </div>
 
-      {/* Quick Actions */}
-      <Row className="g-3">
-        <Col md={6}>
-          <Card className="border-0 shadow-sm">
-            <Card.Body>
-              <h5 className="mb-3">📋 Recent Documents</h5>
-              <p className="text-muted small mb-2">Guide.pdf - Levi - PDF - v1 - Indexed</p>
-              <p className="text-muted small mb-2">spec.pdf - Nike - PDF - v2 - Processing</p>
-              <p className="text-muted small">manual.pdf - Puma - PDF - v1 - Indexed</p>
-            </Card.Body>
-          </Card>
-        </Col>
-        <Col md={6}>
-          <Card className="border-0 shadow-sm">
-            <Card.Body>
-              <h5 className="mb-3">🚀 Quick Actions</h5>
-              <div className="d-flex flex-column gap-2">
-                <button className="btn btn-sm btn-outline-primary">+ Create Tenant</button>
-                <button className="btn btn-sm btn-outline-primary">+ Add User</button>
-                <button className="btn btn-sm btn-outline-primary">📤 Upload Mule ZIP</button>
-                <button className="btn btn-sm btn-outline-primary">🔄 Transform EDI</button>
-              </div>
-            </Card.Body>
-          </Card>
-        </Col>
-      </Row>
+
     </div>
   );
 };
