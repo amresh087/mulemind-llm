@@ -1,6 +1,7 @@
-import { useState, useContext } from 'react';
+import { useContext } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../../auth/AuthContext';
+import { Button } from 'react-bootstrap';
 import './AdminLayout.css';
 
 interface AdminLayoutProps {
@@ -8,7 +9,6 @@ interface AdminLayoutProps {
 }
 
 const AdminLayout = ({ children }: AdminLayoutProps) => {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
   const location = useLocation();
   const navigate = useNavigate();
   const auth = useContext(AuthContext);
@@ -31,41 +31,46 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
   };
 
   return (
-    <div className="admin-layout">
-      {/* Sidebar */}
-      <aside className={`admin-sidebar ${sidebarOpen ? 'open' : 'closed'}`}>
-        <div className="sidebar-header">
-          <button
-            className="sidebar-toggle"
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            title="Toggle Sidebar"
-          >
-            ☰
-          </button>
-          {sidebarOpen && <span className="sidebar-logo">⚡</span>}
+    <div className="app-shell">
+      <header className="admin-topbar">
+        <div className="brand-cluster">
+          <div className="brand-mark">M</div>
+          <div className="brand-text">
+            <span className="brand-name">MuleMind</span>
+            <small className="brand-subtitle">Operations Suite</small>
+          </div>
         </div>
 
-        <nav className="menu">
+        <nav className="top-nav" aria-label="Main navigation">
           {menuItems.map((item) => (
             <Link
               key={item.path}
               to={item.path}
-              className={`menu-item ${isActive(item.path) ? 'active' : ''}`}
+              className={`top-nav-link ${isActive(item.path) ? 'active' : ''}`}
             >
-              <span className="menu-icon">{item.icon}</span>
-              {sidebarOpen && <span className="menu-label">{item.label}</span>}
+              <span>{item.icon}</span>
+              {item.label}
             </Link>
           ))}
-          <hr className="menu-divider" />
-          <button onClick={handleLogout} className="menu-item logout-btn">
-            <span className="menu-icon">🚪</span>
-            {sidebarOpen && <span className="menu-label">Logout</span>}
-          </button>
         </nav>
-      </aside>
 
-      {/* Main Content */}
-      <main className="admin-content">{children}</main>
+        <div className="header-actions">
+          <div className="user-badge">
+            <span className="user-avatar">A</span>
+            <div className="user-meta d-none d-lg-block">
+              <strong>{auth?.user?.username || 'Admin'}</strong>
+            </div>
+          </div>
+
+          <Button variant="outline-secondary" className="logout-action" onClick={handleLogout}>
+            Logout
+          </Button>
+        </div>
+      </header>
+
+      <main className="app-main-panel">
+        <div className="content-surface">{children}</div>
+      </main>
     </div>
   );
 };

@@ -10,7 +10,40 @@ const ShopkeeperDashboard = () => {
   const { t } = useTranslation();
   const username = auth?.user?.username || 'Shopkeeper';
 
-  const menuItems = [];
+  const menuItems = [
+    {
+      title: 'Inventory',
+      description: 'Track stock, pricing, and product activity.',
+      icon: '📦',
+      badge: 'Live',
+      color: 'primary',
+      link: '/shopkeeper/inventory',
+    },
+    {
+      title: 'Orders',
+      description: 'Review customer orders and fulfillment state.',
+      icon: '🧾',
+      badge: '12',
+      color: 'success',
+      link: '/shopkeeper/orders',
+    },
+    {
+      title: 'Customers',
+      description: 'Manage customer profiles and engagement.',
+      icon: '👥',
+      badge: 'New',
+      color: 'warning',
+      link: '/shopkeeper/customers',
+    },
+    {
+      title: 'Reports',
+      description: 'Monitor performance with actionable insights.',
+      icon: '📈',
+      badge: 'AI',
+      color: 'info',
+      link: '/shopkeeper/reports',
+    },
+  ];
 
   return (
     <Container fluid className="shopkeeper-dashboard-container py-4">

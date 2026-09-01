@@ -16,6 +16,18 @@ export interface UserRecord {
   active?: boolean;
 }
 
+export type UserDto = {
+  id?: number;
+  username: string;
+  email: string;
+  password?: string;
+  role?: string;
+  active?: boolean;
+  tenantId?: number;
+  tenant?: string;
+  status?: string;
+};
+
 interface UserPayload {
   id?: number;
   userId?: number;
@@ -52,6 +64,11 @@ const normalizeUser = (user: UserPayload): UserRecord => ({
 });
 
 const USERS_ENDPOINT = '/tenants/users';
+
+export const getUsers = async () => api.get(USERS_ENDPOINT);
+export const createUser = async (payload: UserDto) => api.post(USERS_ENDPOINT, payload);
+export const updateUser = async (userId: number, payload: UserDto) => api.put(`${USERS_ENDPOINT}/${userId}`, payload);
+export const deleteUser = async (userId: number) => api.delete(`${USERS_ENDPOINT}/${userId}`);
 
 export const userService = {
   getAll: async (): Promise<UserRecord[]> => {

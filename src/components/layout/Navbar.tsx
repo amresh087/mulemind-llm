@@ -1,19 +1,16 @@
 import React from "react";
 import { Navbar, Container, Button } from "react-bootstrap";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
-import { useNavigate } from "react-router-dom";
-import { useTranslation } from "react-i18next";
 import LanguageSwitcher from "../LanguageSwitcher";
 
 const AppNavbar: React.FC = () => {
-  const { user, logout } = useAuth(); // get user and logout from context
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const { t } = useTranslation();
 
   const handleLogout = () => {
-    logout();           // clear user state and localStorage
-    navigate("/login"); // redirect to login page
+    logout();
+    navigate('/login');
   };
 
   return (
@@ -29,10 +26,10 @@ const AppNavbar: React.FC = () => {
             {user ? (
               <div className="d-flex align-items-center">
                 <span className="text-light me-3">Welcome, {user.username}</span>
-                <Button variant="outline-light" size="sm" onClick={handleLogout}>{t('common.logout')}</Button>
+                <Button variant="outline-light" size="sm" onClick={handleLogout}>Logout</Button>
               </div>
             ) : (
-              <Link to="/login" className="btn btn-outline-light btn-sm">{t('login.loginButton')}</Link>
+              <Link to="/login" className="btn btn-outline-light btn-sm">Login</Link>
             )}
           </div>
         </Container>

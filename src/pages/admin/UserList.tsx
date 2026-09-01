@@ -127,7 +127,7 @@ const UserList = () => {
       username: formData.username.trim(),
       email: formData.email.trim(),
       password: formData.password || 'Welcome123!',
-      tenantId: selectedTenant?.id ?? editingUser?.tenantId ?? null,
+      tenantId: selectedTenant?.id ?? editingUser?.tenantId ?? undefined,
       tenantCode: selectedTenant?.code ?? undefined,
       roleId: roleIdMap[formData.role],
       status: formData.status,

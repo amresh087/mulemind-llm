@@ -1,7 +1,21 @@
-/* Mobile-friendly global rules */
+/* Global dashboard theme */
+:root {
+  --bs-body-bg: #eef4ff;
+  --bs-body-color: #0f172a;
+  --bs-border-color: rgba(148, 163, 184, 0.2);
+  --bs-primary: #4f46e5;
+  --bs-secondary: #64748b;
+}
 
 html, body, #root {
   height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: 'Inter', 'Segoe UI', sans-serif;
+  background: linear-gradient(180deg, #eef4ff 0%, #f8fafc 100%);
+  color: var(--bs-body-color);
 }
 
 img {
@@ -9,22 +23,35 @@ img {
   height: auto;
 }
 
-/* Make form controls full width on small screens */
+button, .btn, .form-control, .form-select {
+  transition: all 0.2s ease;
+}
+
+.card {
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(148, 163, 184, 0.08);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(79, 70, 229, 0.35);
+  border-radius: 999px;
+}
+
 @media (max-width: 575.98px) {
   .form-control, .form-select {
     width: 100% !important;
   }
 
-  main {
-    padding: 1rem !important;
-  }
-
-  .card {
-    margin: 0.5rem !important;
-  }
-
   .container {
-    padding-left: 0.5rem;
-    padding-right: 0.5rem;
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
   }
 }

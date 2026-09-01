@@ -1,16 +1,14 @@
 import { Card, Form, Button, Row, Col } from 'react-bootstrap';
 import { useContext, useState } from 'react';
 import { AuthContext } from '../../auth/AuthContext';
-import { useNavigate } from 'react-router-dom';
 
 const Profile = () => {
   const auth = useContext(AuthContext);
-  const navigate = useNavigate();
   const [profile, setProfile] = useState({
     username: auth?.user?.username || '',
-    email: auth?.user?.username + '@example.com' || '',
+    email: auth?.user?.username ? `${auth.user.username}@example.com` : '',
     role: auth?.user?.role || '',
-    tenant: auth?.user?.tenantId || '',
+    tenant: auth?.user?.roles?.join(', ') || '',
   });
   const [passwordData, setPasswordData] = useState({
     oldPassword: '',
@@ -37,11 +35,6 @@ const Profile = () => {
     }
     alert('Password changed successfully!');
     setPasswordData({ oldPassword: '', newPassword: '', confirmPassword: '' });
-  };
-
-  const handleLogout = () => {
-    auth?.logout();
-    navigate('/login');
   };
 
   return (
@@ -154,10 +147,6 @@ const Profile = () => {
                 <p className="small text-muted mb-1">Last Login</p>
                 <p className="fw-medium">{new Date().toLocaleString()}</p>
               </div>
-              <hr />
-              <Button variant="outline-danger" className="w-100" onClick={handleLogout}>
-                🚪 Logout
-              </Button>
             </Card.Body>
           </Card>
         </Col>
