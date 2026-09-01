@@ -15,13 +15,34 @@ const AppNavbar: React.FC = () => {
 
   return (
     <>
-      <Navbar bg="dark" variant="dark" expand={false}>
-        <Container className="d-flex justify-content-between align-items-center">
-          <div className="d-flex align-items-center">
-            <Navbar.Brand as={Link} to="/">AI EDI Platform</Navbar.Brand>
+      <Navbar bg="dark" variant="dark" expand={false} style={{ flexShrink: 0 }}>
+        <Container fluid className="d-flex justify-content-between align-items-center px-3">
+          <div className="d-flex align-items-center gap-2 me-auto">
+            <div
+              style={{
+                width: '2.2rem',
+                height: '2.2rem',
+                borderRadius: '0.8rem',
+                background: 'linear-gradient(135deg, #4f46e5 0%, #10b981 100%)',
+                color: '#fff',
+                fontWeight: 800,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                letterSpacing: '0.05em',
+              }}
+            >
+              A
+            </div>
+            <div className="d-flex flex-column" style={{ lineHeight: 1.1 }}>
+              <span style={{ fontSize: '1rem', fontWeight: 800, color: '#fff' }}>AI EDI Platform</span>
+              <small style={{ color: '#cbd5e1', fontSize: '0.68rem', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                Operations Suite
+              </small>
+            </div>
           </div>
 
-          <div className="d-flex align-items-center gap-2">
+          <div className="d-flex align-items-center gap-2 ms-auto">
             <LanguageSwitcher />
             {user ? (
               <div className="d-flex align-items-center">

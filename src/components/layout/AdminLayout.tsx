@@ -33,14 +33,6 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
   return (
     <div className="app-shell">
       <header className="admin-topbar">
-        <div className="brand-cluster">
-          <div className="brand-mark">M</div>
-          <div className="brand-text">
-            <span className="brand-name">MuleMind</span>
-            <small className="brand-subtitle">Operations Suite</small>
-          </div>
-        </div>
-
         <nav className="top-nav" aria-label="Main navigation">
           {menuItems.map((item) => (
             <Link
@@ -54,18 +46,7 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
           ))}
         </nav>
 
-        <div className="header-actions">
-          <div className="user-badge">
-            <span className="user-avatar">A</span>
-            <div className="user-meta d-none d-lg-block">
-              <strong>{auth?.user?.username || 'Admin'}</strong>
-            </div>
-          </div>
-
-          <Button variant="outline-secondary" className="logout-action" onClick={handleLogout}>
-            Logout
-          </Button>
-        </div>
+       
       </header>
 
       <main className="app-main-panel">
