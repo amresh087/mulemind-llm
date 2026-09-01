@@ -35,9 +35,9 @@ const AppNavbar: React.FC = () => {
               A
             </div>
             <div className="d-flex flex-column" style={{ lineHeight: 1.1 }}>
-              <span style={{ fontSize: '1rem', fontWeight: 800, color: '#fff' }}>AI EDI Platform</span>
+              <span style={{ fontSize: '1rem', fontWeight: 800, color: '#fff' }}>MuleMind AI</span>
               <small style={{ color: '#cbd5e1', fontSize: '0.68rem', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-                Operations Suite
+                
               </small>
             </div>
           </div>

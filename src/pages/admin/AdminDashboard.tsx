@@ -16,7 +16,11 @@ const AdminDashboard = () => {
     { title: 'Storage warning', detail: 'Backup usage is above target by 6%', time: '1 hr ago', tone: 'warning' },
   ];
 
-  const quickActions = ['Create tenant', 'Upload ZIP', 'Run EDI sync', 'Review jobs'];
+  const overviewMetrics = [
+    { label: 'Jobs completed', value: '1,248', tone: 'primary' },
+    { label: 'Successful syncs', value: '96.2%', tone: 'success' },
+    { label: 'Pending approvals', value: '14', tone: 'warning' },
+  ];
 
   return (
     <div className="dashboard-shell">
@@ -80,14 +84,15 @@ const AdminDashboard = () => {
         <Col lg={4}>
           <Card className="panel-card border-0 shadow-sm h-100">
             <Card.Header className="panel-header border-0 bg-transparent">
-              <span className="panel-kicker">Actions</span>
-              <h3 className="panel-title mb-0">Quick actions</h3>
+              <span className="panel-kicker">Overview</span>
+              <h3 className="panel-title mb-0">Operational snapshot</h3>
             </Card.Header>
-            <Card.Body className="d-grid gap-2">
-              {quickActions.map((action) => (
-                <Button key={action} variant="light" className="quick-action-btn text-start rounded-3 fw-semibold border-0">
-                  {action}
-                </Button>
+            <Card.Body className="d-flex flex-column gap-3">
+              {overviewMetrics.map((item) => (
+                <div key={item.label} className={`mini-stat-box bg-${item.tone}-subtle text-${item.tone}`}>
+                  <span>{item.label}</span>
+                  <strong>{item.value}</strong>
+                </div>
               ))}
             </Card.Body>
           </Card>

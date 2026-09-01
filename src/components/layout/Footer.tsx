@@ -7,7 +7,7 @@ const Footer: React.FC = () => {
       <Container>
         <Row>
           <Col md={6} className="text-center text-md-start">
-            © 2026 AI EDI Platform
+            © 2026 MuleMind AI
           </Col>
           <Col md={6} className="text-center text-md-end">
             All rights reserved

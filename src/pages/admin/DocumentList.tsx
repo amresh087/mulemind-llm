@@ -10,6 +10,10 @@ const DocumentList = () => {
   const [error, setError] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingDoc, setEditingDoc] = useState<DocumentRecord | null>(null);
+  const [filter, setFilter] = useState('all');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(5);
   const [formData, setFormData] = useState({
     name: '',
     type: 'PDF',
@@ -155,58 +159,141 @@ const DocumentList = () => {
     }
   };
 
+  const filteredDocuments = documents.filter((doc) => {
+    const matchesFilter = filter === 'all' || doc.status?.toLowerCase() === filter;
+    const query = searchTerm.trim().toLowerCase();
+    const matchesSearch = !query || [doc.name, doc.type, doc.tenant, doc.status].join(' ').toLowerCase().includes(query);
+    return matchesFilter && matchesSearch;
+  });
+
+  const totalPages = Math.max(1, Math.ceil(filteredDocuments.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const paginatedDocuments = filteredDocuments.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  useEffect(() => {
+    setPage(1);
+  }, [filter, searchTerm, pageSize]);
+
   return (
     <div>
-      <div className="d-flex justify-content-between align-items-center mb-4">
+      <div className="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
         <div>
-          <h2>� Mule ZIP Uploads</h2>
-          <p className="text-muted">Upload and manage Mule ZIP transformation packages</p>
+          <h4 className="mb-0 fw-semibold" style={{ color: '#0f172a' }}>📤 Mule ZIP Uploads</h4>
+          <small className="text-muted">Upload and manage Mule ZIP transformation packages</small>
         </div>
-        <Button variant="primary" onClick={openCreateModal}>📤 Upload Mule ZIP</Button>
+        <Button variant="primary" size="sm" className="rounded-pill px-3" onClick={openCreateModal}>📤 Upload Mule ZIP</Button>
       </div>
 
       <Card className="border-0 shadow-sm">
         <Card.Body>
           {error && <Alert variant="danger">{error}</Alert>}
+
+          {!loading && (
+            <div className="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+              <div className="d-flex gap-2 flex-wrap align-items-center">
+                <Form.Control
+                  size="sm"
+                  type="text"
+                  placeholder="Search projects..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  style={{ width: '220px' }}
+                />
+                <Form.Select
+                  size="sm"
+                  value={filter}
+                  onChange={(e) => setFilter(e.target.value)}
+                  style={{ width: '180px' }}
+                >
+                  <option value="all">All</option>
+                  <option value="indexed">Indexed</option>
+                  <option value="processing">Processing</option>
+                  <option value="failed">Failed</option>
+                </Form.Select>
+              </div>
+              <div className="d-flex align-items-center gap-2">
+                <small className="text-muted">Rows</small>
+                <Form.Select
+                  size="sm"
+                  value={pageSize}
+                  onChange={(e) => setPageSize(Number(e.target.value))}
+                  style={{ width: '82px' }}
+                >
+                  <option value={5}>5</option>
+                  <option value={10}>10</option>
+                  <option value={15}>15</option>
+                </Form.Select>
+              </div>
+            </div>
+          )}
+
           {loading ? (
             <div className="d-flex align-items-center gap-2 text-muted">
               <Spinner animation="border" size="sm" />
               <span>Loading documents...</span>
             </div>
           ) : (
-            <Table hover>
-              <thead>
-                <tr>
-                  <th>Docs Name</th>
-                  <th>Type</th>
-                  <th>Tenant</th>
-                  <th>Status</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {documents.map((doc) => (
-                  <tr key={doc.id}>
-                    <td className="fw-medium">{doc.name}</td>
-                    <td>
-                      {doc.type === 'MULE_ZIP' ? (
-                        <Badge bg="info">🔗 Mule ZIP</Badge>
-                      ) : (
-                        doc.type
-                      )}
-                    </td>
-                    <td>{doc.tenant}</td>                   
-                    <td>
-                      <Badge bg={getStatusColor(doc.status)}>{doc.status}</Badge>
-                    </td>
-                    <td>
-                      <Button variant="outline-primary" size="sm" className="me-2" onClick={() => openEditModal(doc)}>Edit</Button>
-                      <Button variant="outline-danger" size="sm" onClick={() => handleDelete(doc.id)}>Delete</Button>
-                    </td>
+            <>
+              <Table hover size="sm">
+                <thead>
+                  <tr>
+                    <th>Project Name</th>
+                    <th>Type</th>
+                    <th>Tenant</th>
+                    <th>Status</th>
+                    <th>Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </Table>
+                </thead>
+                <tbody>
+                  {paginatedDocuments.map((doc) => (
+                    <tr key={doc.id}>
+                      <td className="fw-medium">{doc.name}</td>
+                      <td>
+                        {doc.type === 'MULE_ZIP' ? (
+                          <Badge bg="info">🔗 Mule ZIP</Badge>
+                        ) : (
+                          doc.type
+                        )}
+                      </td>
+                      <td>{doc.tenant}</td>
+                      <td>
+                        <Badge bg={getStatusColor(doc.status)}>{doc.status}</Badge>
+                      </td>
+                      <td>
+                        <Button variant="outline-secondary" size="sm" className="me-2" onClick={() => openEditModal(doc)}>Edit</Button>
+                        <Button variant="outline-danger" size="sm" onClick={() => handleDelete(doc.id)}>Delete</Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </Table>
+
+              {filteredDocuments.length > pageSize && (
+                <div className="d-flex justify-content-between align-items-center mt-3 pt-2 border-top">
+                  <small className="text-muted">
+                    Showing {filteredDocuments.length} records · Page {currentPage} of {totalPages}
+                  </small>
+                  <div className="d-flex gap-2">
+                    <Button
+                      variant="outline-secondary"
+                      size="sm"
+                      disabled={currentPage === 1}
+                      onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    >
+                      Prev
+                    </Button>
+                    <Button
+                      variant="outline-secondary"
+                      size="sm"
+                      disabled={currentPage === totalPages}
+                      onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    >
+                      Next
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </Card.Body>
       </Card>
@@ -218,20 +305,17 @@ const DocumentList = () => {
         <Modal.Body>
           <Form onSubmit={handleSubmit}>
             <Form.Group className="mb-3">
-              <Form.Label>Document File</Form.Label>
-              <Form.Control type="file" accept=".pdf,.xml,.txt,.zip" onChange={handleFileSelect} />
-              <Form.Text className="text-muted">Choose a PDF, XML, TXT, or Mule ZIP file from your computer.</Form.Text>
+              <Form.Label>ZIP File</Form.Label>
+              <Form.Control type="file" accept=".zip" onChange={handleFileSelect} />
+              <Form.Text className="text-muted">Choose a Mule ZIP file from your computer.</Form.Text>
             </Form.Group>
             <Form.Group className="mb-3">
-              <Form.Label>Document Name</Form.Label>
+              <Form.Label>Project Name</Form.Label>
               <Form.Control value={formData.name} onChange={(event) => setFormData((current) => ({ ...current, name: event.target.value }))} required />
             </Form.Group>
             <Form.Group className="mb-3">
               <Form.Label>Type</Form.Label>
               <Form.Select value={formData.type} onChange={(event) => setFormData((current) => ({ ...current, type: event.target.value }))}>
-                <option value="PDF">PDF</option>
-                <option value="XML">XML</option>
-                <option value="TXT">TXT</option>
                 <option value="MULE_ZIP">Mule ZIP</option>
               </Form.Select>
             </Form.Group>
