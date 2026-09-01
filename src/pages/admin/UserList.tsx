@@ -41,6 +41,10 @@ const UserList = () => {
   const [showModal, setShowModal] = useState(false);
   const [editingUser, setEditingUser] = useState<UserRecord | null>(null);
   const [formData, setFormData] = useState<FormState>(emptyForm());
+  const [filter, setFilter] = useState('all');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(5);
 
   useEffect(() => {
     void loadUsersAndTenants();
@@ -175,58 +179,149 @@ const UserList = () => {
     }
   };
 
+  const filteredUsers = users.filter((user) => {
+    const matchesFilter = filter === 'all' || user.status?.toLowerCase() === filter;
+    const query = searchTerm.trim().toLowerCase();
+    const matchesSearch = !query || [user.name, user.email, user.role, user.tenant, user.status]
+      .join(' ')
+      .toLowerCase()
+      .includes(query);
+
+    return matchesFilter && matchesSearch;
+  });
+
+  const totalPages = Math.max(1, Math.ceil(filteredUsers.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const paginatedUsers = filteredUsers.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  useEffect(() => {
+    setPage(1);
+  }, [filter, searchTerm, pageSize]);
+
   return (
     <div>
-      <div className="d-flex justify-content-between align-items-center mb-4">
+      <div className="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
         <div>
-          <h2>👥 User Management</h2>
-          <p className="text-muted">Manage all users and their roles</p>
+          <h4 className="mb-0 fw-semibold" style={{ color: '#0f172a' }}>👥 User Management</h4>
+          <small className="text-muted">Manage all users in the system</small>
         </div>
-        <Button variant="primary" onClick={openCreateModal}>+ Create User</Button>
+        <Button variant="primary" size="sm" className="rounded-pill px-3" onClick={openCreateModal}>
+          + Create User
+        </Button>
       </div>
 
       <Card className="border-0 shadow-sm">
         <Card.Body>
           {error && <Alert variant="danger">{error}</Alert>}
+
+          {!loading && (
+            <div className="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+              <div className="d-flex gap-2 flex-wrap align-items-center">
+                <Form.Control
+                  size="sm"
+                  type="text"
+                  placeholder="Search users..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  style={{ width: '220px' }}
+                />
+                <Form.Select
+                  size="sm"
+                  value={filter}
+                  onChange={(e) => setFilter(e.target.value)}
+                  style={{ width: '180px' }}
+                >
+                  <option value="all">All</option>
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                </Form.Select>
+              </div>
+              <div className="d-flex align-items-center gap-2">
+                <small className="text-muted">Rows</small>
+                <Form.Select
+                  size="sm"
+                  value={pageSize}
+                  onChange={(e) => setPageSize(Number(e.target.value))}
+                  style={{ width: '82px' }}
+                >
+                  <option value={5}>5</option>
+                  <option value={10}>10</option>
+                  <option value={15}>15</option>
+                </Form.Select>
+              </div>
+              <small className="text-muted">
+                Showing {filteredUsers.length} users
+              </small>
+            </div>
+          )}
+
           {loading ? (
             <div className="d-flex align-items-center gap-2 text-muted">
               <Spinner animation="border" size="sm" />
               <span>Loading users...</span>
             </div>
           ) : (
-            <Table hover>
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Email</th>
-                  <th>Role</th>
-                  <th>Tenant</th>
-                  <th>Status</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {users.map((user) => (
-                  <tr key={user.id}>
-                    <td className="fw-medium">{user.name}</td>
-                    <td>{user.email}</td>
-                    <td>
-                      <Badge bg={getRoleColor(user.role)}>{user.role}</Badge>
-                    </td>
-                    <td>{user.tenant}</td>
-                    <td>
-                      <Badge bg={user.status === 'Active' ? 'success' : 'secondary'}>
-                        {user.status}
-                      </Badge>
-                    </td>
-                    <td>
-                      <Button variant="outline-primary" size="sm" className="me-2" onClick={() => openEditModal(user)}>Edit</Button>
-                      <Button variant="outline-danger" size="sm" onClick={() => handleDeleteUser(user.id)}>Delete</Button>
-                    </td>
+            <>
+              <Table hover size="sm">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Role</th>
+                    <th>Tenant</th>
+                    <th>Status</th>
+                    <th>Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </Table>
+                </thead>
+                <tbody>
+                  {paginatedUsers.map((user) => (
+                    <tr key={user.id}>
+                      <td className="fw-medium">{user.name}</td>
+                      <td>{user.email}</td>
+                      <td>
+                        <Badge bg={getRoleColor(user.role)}>{user.role}</Badge>
+                      </td>
+                      <td>{user.tenant}</td>
+                      <td>
+                        <Badge bg={user.status === 'Active' ? 'success' : 'secondary'}>
+                          {user.status}
+                        </Badge>
+                      </td>
+                      <td>
+                        <Button variant="outline-secondary" size="sm" className="me-2" onClick={() => openEditModal(user)}>Edit</Button>
+                        <Button variant="outline-danger" size="sm" onClick={() => handleDeleteUser(user.id)}>Delete</Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </Table>
+
+              {filteredUsers.length > pageSize && (
+                <div className="d-flex justify-content-between align-items-center mt-3 pt-2 border-top">
+                  <small className="text-muted">
+                    Page {currentPage} of {totalPages}
+                  </small>
+                  <div className="d-flex gap-2">
+                    <Button
+                      variant="outline-secondary"
+                      size="sm"
+                      disabled={currentPage === 1}
+                      onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    >
+                      Prev
+                    </Button>
+                    <Button
+                      variant="outline-secondary"
+                      size="sm"
+                      disabled={currentPage === totalPages}
+                      onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    >
+                      Next
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </Card.Body>
       </Card>

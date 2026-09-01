@@ -1,4 +1,4 @@
-import { Card, Table, Button, Alert, Spinner, Modal } from 'react-bootstrap';
+import { Card, Table, Button, Alert, Spinner, Modal, Form } from 'react-bootstrap';
 import { useEffect, useState } from 'react';
 import OnboardClientModal from '../../components/OnboardClientModal';
 import { tenantService, type TenantRecord } from '../../services/tenantService';
@@ -12,6 +12,10 @@ const TenantList = () => {
   const [showOnboard, setShowOnboard] = useState(false);
   const [editingTenant, setEditingTenant] = useState<TenantRecord | null>(null);
   const [selectedTenant, setSelectedTenant] = useState<TenantRecord | null>(null);
+  const [filter, setFilter] = useState('all');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(5);
 
   useEffect(() => {
     void loadTenants();
@@ -108,59 +112,155 @@ const TenantList = () => {
     }
   };
 
+  const filteredTenants = tenants.filter((tenant) => {
+    const matchesFilter = filter === 'all' || tenant.status?.toLowerCase() === filter;
+    const query = searchTerm.trim().toLowerCase();
+    const matchesSearch = !query || [tenant.code, tenant.name, tenant.status]
+      .join(' ')
+      .toLowerCase()
+      .includes(query);
+
+    return matchesFilter && matchesSearch;
+  });
+
+  const totalPages = Math.max(1, Math.ceil(filteredTenants.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const paginatedTenants = filteredTenants.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  useEffect(() => {
+    setPage(1);
+  }, [filter, searchTerm, pageSize]);
+
   return (
     <div>
-      <div className="d-flex justify-content-between align-items-center mb-4">
+      <div className="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
         <div>
-          <h2>🏢 Tenant Management</h2>
-          <p className="text-muted">Manage all tenants in the system</p>
+          <h4 className="mb-0 fw-semibold" style={{ color: '#0f172a' }}>🏢 Tenant Management</h4>
+          <small className="text-muted">Manage all tenants in the system</small>
         </div>
-        <Button variant="primary" onClick={() => {
-          setEditingTenant(null);
-          setShowOnboard(true);
-        }}>+ Create Tenant</Button>
+        <Button
+          variant="primary"
+          size="sm"
+          className="rounded-pill px-3"
+          onClick={() => {
+            setEditingTenant(null);
+            setShowOnboard(true);
+          }}
+        >
+          + Create Tenant
+        </Button>
       </div>
 
       <Card className="border-0 shadow-sm">
         <Card.Body>
           {error && <Alert variant="danger">{error}</Alert>}
+
+          {!loading && (
+            <div className="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+              <div className="d-flex gap-2 flex-wrap align-items-center">
+                <Form.Control
+                  size="sm"
+                  type="text"
+                  placeholder="Search tenants..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  style={{ width: '220px' }}
+                />
+                <Form.Select
+                  size="sm"
+                  value={filter}
+                  onChange={(e) => setFilter(e.target.value)}
+                  style={{ width: '180px' }}
+                >
+                  <option value="all">All</option>
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                </Form.Select>
+              </div>
+              <div className="d-flex align-items-center gap-2">
+                <small className="text-muted">Rows</small>
+                <Form.Select
+                  size="sm"
+                  value={pageSize}
+                  onChange={(e) => setPageSize(Number(e.target.value))}
+                  style={{ width: '82px' }}
+                >
+                  <option value={5}>5</option>
+                  <option value={10}>10</option>
+                  <option value={15}>15</option>
+                </Form.Select>
+              </div>
+              <small className="text-muted">
+                Showing {filteredTenants.length} tenants
+              </small>
+            </div>
+          )}
+
           {loading ? (
             <div className="d-flex align-items-center gap-2 text-muted">
               <Spinner animation="border" size="sm" />
               <span>Loading tenants...</span>
             </div>
           ) : (
-            <Table hover>
-              <thead>
-                <tr>
-                  <th>Code</th>
-                  <th>Name</th>
-                  <th>Status</th>
-                  <th>Users</th>
-                  <th>Documents</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {tenants.map((tenant) => (
-                  <tr key={tenant.id}>
-                    <td className="fw-medium">{tenant.code}</td>
-                    <td>{tenant.name}</td>
-                    <td>
-                      <span className={`badge bg-${tenant.status === 'Active' ? 'success' : 'secondary'}`}>
-                        {tenant.status}
-                      </span>
-                    </td>
-                    <td>{tenant.users}</td>
-                    <td>{tenant.documents}</td>
-                    <td>
-                      <Button variant="outline-secondary" size="sm" className="me-2" onClick={() => handleEditTenant(tenant)}>Edit</Button>
-                      <Button variant="outline-danger" size="sm" onClick={() => handleDeleteTenant(tenant.id)}>Delete</Button>
-                    </td>
+            <>
+              <Table hover size="sm">
+                <thead>
+                  <tr>
+                    <th>Code</th>
+                    <th>Name</th>
+                    <th>Status</th>
+                    <th>Users</th>
+                    <th>Documents</th>
+                    <th>Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </Table>
+                </thead>
+                <tbody>
+                  {paginatedTenants.map((tenant) => (
+                    <tr key={tenant.id}>
+                      <td className="fw-medium">{tenant.code}</td>
+                      <td>{tenant.name}</td>
+                      <td>
+                        <span className={`badge bg-${tenant.status === 'Active' ? 'success' : 'secondary'}`}>
+                          {tenant.status}
+                        </span>
+                      </td>
+                      <td>{tenant.users}</td>
+                      <td>{tenant.documents}</td>
+                      <td>
+                        <Button variant="outline-secondary" size="sm" className="me-2" onClick={() => handleEditTenant(tenant)}>Edit</Button>
+                        <Button variant="outline-danger" size="sm" onClick={() => handleDeleteTenant(tenant.id)}>Delete</Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </Table>
+
+              {filteredTenants.length > pageSize && (
+                <div className="d-flex justify-content-between align-items-center mt-3 pt-2 border-top">
+                  <small className="text-muted">
+                    Page {currentPage} of {totalPages}
+                  </small>
+                  <div className="d-flex gap-2">
+                    <Button
+                      variant="outline-secondary"
+                      size="sm"
+                      disabled={currentPage === 1}
+                      onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    >
+                      Prev
+                    </Button>
+                    <Button
+                      variant="outline-secondary"
+                      size="sm"
+                      disabled={currentPage === totalPages}
+                      onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    >
+                      Next
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </Card.Body>
       </Card>
