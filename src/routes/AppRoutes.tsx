@@ -8,13 +8,11 @@ import AdminDashboard from '../pages/admin/AdminDashboard';
 import TenantList from '../pages/admin/TenantList';
 import UserList from '../pages/admin/UserList';
 import DocumentList from '../pages/admin/DocumentList';
-import EDITransform from '../pages/admin/EDITransform';
+import MuleTransform from '../pages/admin/MuleTransform';
 import Transactions from '../pages/admin/Transactions';
 import AISettings from '../pages/admin/AISettings';
 import Profile from '../pages/admin/Profile';
 import JobsList from '../pages/admin/JobsList';
-
-import FromPurchase from '../pages/admin/FromPurchase';
 
 import ShopkeeperDashboard from '../pages/shopkeeper/ShopkeeperDashboard';
 
@@ -74,11 +72,11 @@ const AppRoutes: React.FC = () => (
       }
     />
     <Route
-      path="/admin/edi-transform"
+      path="/admin/mule-transform"
       element={
         <RequireAuth roles={['ADMIN']}>
           <AdminLayout>
-            <EDITransform />
+            <MuleTransform />
           </AdminLayout>
         </RequireAuth>
       }

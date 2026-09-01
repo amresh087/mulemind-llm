@@ -32,7 +32,7 @@ const AppNavbar: React.FC = () => {
                 letterSpacing: '0.05em',
               }}
             >
-              A
+              M
             </div>
             <div className="d-flex flex-column" style={{ lineHeight: 1.1 }}>
               <span style={{ fontSize: '1rem', fontWeight: 800, color: '#fff' }}>MuleMind AI</span>

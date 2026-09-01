@@ -18,7 +18,7 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
     { label: 'Tenants', icon: '🏢', path: '/admin/tenants' },
     { label: 'Users', icon: '👥', path: '/admin/users' },
     { label: 'Mule ZIP Uploads', icon: '📤', path: '/admin/documents' },
-    { label: 'EDI Transformation', icon: '🔄', path: '/admin/edi-transform' },
+    { label: 'Mule Transformation', icon: '🔄', path: '/admin/mule-transform' },
     { label: 'Transactions', icon: '💳', path: '/admin/transactions' },
     { label: 'AI Settings', icon: '⚡', path: '/admin/ai-settings' },
   ];

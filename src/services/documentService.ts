@@ -5,21 +5,23 @@ export interface DocumentRecord {
   name: string;
   type: string;
   tenant: string;
+  transactionTypeCode?: string;
+  mappingType?: string;
   version: string;
   status: string;
   contentType?: string;
   objectName?: string;
-  isMuleZip?: boolean;
 }
 
 interface DocumentPayload {
   name: string;
   type?: string;
   tenant?: string;
+  transactionTypeCode?: string;
+  mappingType?: string;
   version?: string;
   status?: string;
   contentType?: string;
-  isMuleZip?: boolean;
 }
 
 interface DocumentApiResponse {
@@ -27,11 +29,28 @@ interface DocumentApiResponse {
   name?: string;
   type?: string;
   tenant?: string;
+  transactionTypeCode?: string;
+  mappingType?: string;
   version?: string;
   status?: string;
   contentType?: string;
   objectName?: string;
-  isMuleZip?: boolean;
+}
+
+export interface TransformationJobStatus {
+  id?: string;
+  documentId?: string;
+  jobName?: string;
+  status?: string;
+  payload?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+interface UpdateTransformationJobPayload {
+  documentId?: string;
+  jobName?: string;
+  payload?: string;
 }
 
 const normalizeDocument = (doc: DocumentApiResponse): DocumentRecord => ({
@@ -39,16 +58,20 @@ const normalizeDocument = (doc: DocumentApiResponse): DocumentRecord => ({
   name: doc.name ?? '',
   type: doc.type ?? 'PDF',
   tenant: doc.tenant ?? 'Unknown',
+  transactionTypeCode: doc.transactionTypeCode ?? '',
+  mappingType: doc.mappingType ?? '',
   version: doc.version ?? 'v1',
   status: doc.status ?? 'Indexed',
   contentType: doc.contentType,
-  isMuleZip: doc.isMuleZip ?? (doc.type === 'MULE_ZIP'),
 });
 
 export const documentService = {
-  getAll: async (): Promise<DocumentRecord[]> => {
-    const response = await api.get('/documents');
-    return (response.data ?? []).map(normalizeDocument);
+  getAll: async (mappingDoc?: string): Promise<DocumentRecord[]> => {
+    const response = await api.get('/documents', {
+      params: mappingDoc ? { mappingdoc: mappingDoc } : undefined,
+    });
+    const data = Array.isArray(response.data) ? (response.data as DocumentApiResponse[]) : [];
+    return data.map(normalizeDocument);
   },
 
   create: async (payload: DocumentPayload): Promise<DocumentRecord> => {
@@ -62,10 +85,11 @@ export const documentService = {
     formData.append('name', payload.name);
     if (payload.type) formData.append('type', payload.type);
     if (payload.tenant) formData.append('tenant', payload.tenant);
+    if (payload.transactionTypeCode) formData.append('transactionTypeCode', payload.transactionTypeCode);
     if (payload.version) formData.append('version', payload.version);
     if (payload.status) formData.append('status', payload.status);
+    if (payload.mappingType) formData.append('mappingType', payload.mappingType);
     if (payload.contentType) formData.append('contentType', payload.contentType);
-    if (payload.isMuleZip) formData.append('isMuleZip', String(payload.isMuleZip));
 
     const response = await api.post('/documents/upload', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
@@ -76,6 +100,40 @@ export const documentService = {
   update: async (id: string, payload: DocumentPayload): Promise<DocumentRecord> => {
     const response = await api.put(`/documents/${id}`, payload);
     return normalizeDocument(response.data);
+  },
+
+  getTransformationJobStatus: async (documentId: string): Promise<TransformationJobStatus | null> => {
+    try {
+      const response = await api.get(`/documents/jobs/document/${documentId}`);
+      return response.data as TransformationJobStatus;
+    } catch (error: any) {
+      if (error?.response?.status === 404) {
+        return null;
+      }
+      throw error;
+    }
+  },
+
+  getTransactionXml: async (documentId: string, xmlType: 'edixml' | 'idocxml'): Promise<string> => {
+    try {
+      const response = await api.get(`/transaction/xml/${encodeURIComponent(documentId)}/${encodeURIComponent(xmlType)}`, {
+        responseType: 'text',
+      });
+      return typeof response.data === 'string' ? response.data : '';
+    } catch (error: any) {
+      if (error?.response?.status === 404) {
+        return '';
+      }
+      throw error;
+    }
+  },
+
+  updateTransformationJobStatus: async (jobId: string, status: string, payload?: string): Promise<TransformationJobStatus | null> => {
+    const response = await api.put(`/documents/jobs/${jobId}`, {
+      payload: payload ?? status,
+      jobName: 'edi-transformation',
+    });
+    return response.data as TransformationJobStatus;
   },
 
   remove: async (id: string): Promise<void> => {

@@ -18,8 +18,6 @@ const DocumentList = () => {
     name: '',
     type: 'PDF',
     tenant: '',
-    version: 'v1',
-    status: 'Indexed',
     contentType: '',
     isMuleZip: false,
   });
@@ -70,7 +68,7 @@ const DocumentList = () => {
   };
 
   const resetForm = () => {
-    setFormData({ name: '', type: 'PDF', tenant: tenantOptions[0]?.name ?? '', version: 'v1', status: 'Indexed', contentType: '', isMuleZip: false });
+    setFormData({ name: '', type: 'PDF', tenant: tenantOptions[0]?.name ?? '', contentType: '', isMuleZip: false });
     setSelectedFile(null);
     setEditingDoc(null);
   };
@@ -86,8 +84,6 @@ const DocumentList = () => {
       name: doc.name,
       type: doc.type,
       tenant: doc.tenant,
-      version: doc.version,
-      status: doc.status,
       contentType: doc.contentType ?? '',
       isMuleZip: doc.type === 'MULE_ZIP',
     });
@@ -332,18 +328,6 @@ const DocumentList = () => {
                     {tenant.code} - {tenant.name}
                   </option>
                 ))}
-              </Form.Select>
-            </Form.Group>
-            <Form.Group className="mb-3">
-              <Form.Label>Version</Form.Label>
-              <Form.Control value={formData.version} onChange={(event) => setFormData((current) => ({ ...current, version: event.target.value }))} required />
-            </Form.Group>
-            <Form.Group className="mb-3">
-              <Form.Label>Status</Form.Label>
-              <Form.Select value={formData.status} onChange={(event) => setFormData((current) => ({ ...current, status: event.target.value }))}>
-                <option value="Indexed">Indexed</option>
-                <option value="Processing">Processing</option>
-                <option value="Failed">Failed</option>
               </Form.Select>
             </Form.Group>
             <div className="d-flex justify-content-end gap-2 mt-3">
