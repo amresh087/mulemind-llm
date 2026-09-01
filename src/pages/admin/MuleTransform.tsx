@@ -120,9 +120,9 @@ const MuleTransform = () => {
     try {
       // API: Poll the backend to get the latest workflow status and artifact payload during transformation
       const jobStatus = await documentService.getTransformationJobStatus(submissionState.transformationId);
-      const candidateStatus = jobStatus?.status?.trim() || submissionState.documentStatus || 'Indexed';
+      const candidateStatus = jobStatus?.status?.trim() || submissionState.documentStatus || 'Created';
       const recognized = isRecognizedServerStatus(candidateStatus);
-      const latestStatus = recognized ? candidateStatus : submissionState.documentStatus || 'Indexed';
+      const latestStatus = recognized ? candidateStatus : submissionState.documentStatus || 'Created';
       const normalizedStatus = latestStatus.toLowerCase();
       const nextMessage = normalizedStatus.includes('complete') || normalizedStatus.includes('success')
         ? 'The workflow completed successfully.'
@@ -202,21 +202,22 @@ const MuleTransform = () => {
         name: file.name,
         type: 'ZIP',
         tenant: selectedTenant,
-        mappingType: 'edi-to-xml',
-        status: 'Indexed',
+        mappingType: 'MULE_TRANSFORM_MICROSERVICE',
+        status: 'Created',
         contentType: 'application/zip',
       };
 
-      // API: Upload the ZIP file to the document service to start the transformation workflow.
-      // A ZIP is not valid XML; keep the UI in a waiting state until the backend returns transformed XML.
+      // API: Upload the selected ZIP file to the document service, which will initiate the transformation workflow
       const uploadedDocument = await documentService.upload(documentPayload, file);
 
+      alert('File uploaded successfully. Transformation workflow has started.');
       const documentId = uploadedDocument.id || uploadedDocument.name || 'pending';
+      
       // API: Fetch the initial job status immediately after upload to display current workflow stage
       const jobStatus = await documentService.getTransformationJobStatus(documentId);
-      const candidateStatus = jobStatus?.status?.trim() || uploadedDocument.status || 'Indexed';
+      const candidateStatus = jobStatus?.status?.trim() || uploadedDocument.status || 'Created';
       const recognized = isRecognizedServerStatus(candidateStatus);
-      const effectiveStatus = recognized ? candidateStatus : (uploadedDocument.status || 'Indexed');
+      const effectiveStatus = recognized ? candidateStatus : (uploadedDocument.status || 'Created');
 
       const submittedMessage = 'The upload request was accepted and the transformation workflow has started.';
       setSubmissionState({

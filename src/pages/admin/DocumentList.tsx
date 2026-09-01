@@ -10,7 +10,6 @@ const DocumentList = () => {
   const [error, setError] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingDoc, setEditingDoc] = useState<DocumentRecord | null>(null);
-  const [filter, setFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(5);
@@ -51,19 +50,6 @@ const DocumentList = () => {
       console.error(err);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'Indexed':
-        return 'success';
-      case 'Processing':
-        return 'warning';
-      case 'Failed':
-        return 'danger';
-      default:
-        return 'secondary';
     }
   };
 
@@ -156,10 +142,9 @@ const DocumentList = () => {
   };
 
   const filteredDocuments = documents.filter((doc) => {
-    const matchesFilter = filter === 'all' || doc.status?.toLowerCase() === filter;
     const query = searchTerm.trim().toLowerCase();
-    const matchesSearch = !query || [doc.name, doc.type, doc.tenant, doc.status].join(' ').toLowerCase().includes(query);
-    return matchesFilter && matchesSearch;
+    const matchesSearch = !query || [doc.name, doc.type, doc.tenant].join(' ').toLowerCase().includes(query);
+    return matchesSearch;
   });
 
   const totalPages = Math.max(1, Math.ceil(filteredDocuments.length / pageSize));
@@ -168,7 +153,7 @@ const DocumentList = () => {
 
   useEffect(() => {
     setPage(1);
-  }, [filter, searchTerm, pageSize]);
+  }, [searchTerm, pageSize]);
 
   return (
     <div>
@@ -195,17 +180,6 @@ const DocumentList = () => {
                   onChange={(e) => setSearchTerm(e.target.value)}
                   style={{ width: '220px' }}
                 />
-                <Form.Select
-                  size="sm"
-                  value={filter}
-                  onChange={(e) => setFilter(e.target.value)}
-                  style={{ width: '180px' }}
-                >
-                  <option value="all">All</option>
-                  <option value="indexed">Indexed</option>
-                  <option value="processing">Processing</option>
-                  <option value="failed">Failed</option>
-                </Form.Select>
               </div>
               <div className="d-flex align-items-center gap-2">
                 <small className="text-muted">Rows</small>
@@ -236,7 +210,6 @@ const DocumentList = () => {
                     <th>Project Name</th>
                     <th>Type</th>
                     <th>Tenant</th>
-                    <th>Status</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
@@ -252,9 +225,6 @@ const DocumentList = () => {
                         )}
                       </td>
                       <td>{doc.tenant}</td>
-                      <td>
-                        <Badge bg={getStatusColor(doc.status)}>{doc.status}</Badge>
-                      </td>
                       <td>
                         <Button variant="outline-secondary" size="sm" className="me-2" onClick={() => openEditModal(doc)}>Edit</Button>
                         <Button variant="outline-danger" size="sm" onClick={() => handleDelete(doc.id)}>Delete</Button>
