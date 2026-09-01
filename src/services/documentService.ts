@@ -35,6 +35,8 @@ interface DocumentApiResponse {
   status?: string;
   contentType?: string;
   objectName?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface TransformationJobStatus {
@@ -102,10 +104,23 @@ export const documentService = {
     return normalizeDocument(response.data);
   },
 
+
+
+  
   getTransformationJobStatus: async (documentId: string): Promise<TransformationJobStatus | null> => {
     try {
-      const response = await api.get(`/documents/jobs/document/${documentId}`);
-      return response.data as TransformationJobStatus;
+      const response = await api.get(`/documents/${documentId}`);
+      const document = response.data as DocumentApiResponse;
+
+      return {
+        id: document.id || documentId,
+        documentId: document.id || documentId,
+        jobName: 'document-status',
+        status: document.status || 'Indexed',
+        payload: document.objectName || document.name || document.status || 'Indexed',
+        createdAt: document.createdAt ? new Date(document.createdAt).toISOString() : undefined,
+        updatedAt: document.updatedAt ? new Date(document.updatedAt).toISOString() : undefined,
+      };
     } catch (error: any) {
       if (error?.response?.status === 404) {
         return null;
@@ -129,11 +144,29 @@ export const documentService = {
   },
 
   updateTransformationJobStatus: async (jobId: string, status: string, payload?: string): Promise<TransformationJobStatus | null> => {
-    const response = await api.put(`/documents/jobs/${jobId}`, {
-      payload: payload ?? status,
-      jobName: 'edi-transformation',
-    });
-    return response.data as TransformationJobStatus;
+    try {
+      const response = await api.put(`/documents/${jobId}`, {
+        status,
+        payload: payload ?? status,
+        jobName: 'edi-transformation',
+      });
+
+      const document = response.data as DocumentApiResponse;
+      return {
+        id: document.id || jobId,
+        documentId: document.id || jobId,
+        jobName: 'document-status',
+        status: document.status || status,
+        payload: payload ?? document.objectName ?? status,
+        createdAt: document.createdAt ? new Date(document.createdAt).toISOString() : undefined,
+        updatedAt: document.updatedAt ? new Date(document.updatedAt).toISOString() : undefined,
+      };
+    } catch (error: any) {
+      if (error?.response?.status === 404) {
+        return null;
+      }
+      throw error;
+    }
   },
 
   remove: async (id: string): Promise<void> => {
