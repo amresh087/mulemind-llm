@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Card, Table, Button, Badge, Spinner, Modal } from 'react-bootstrap';
+import { Card, Table, Button, Badge, Spinner, Modal, Form } from 'react-bootstrap';
 import { documentService, type DocumentRecord } from '../../services/documentService';
 
 type TransactionHistoryRow = {
@@ -21,7 +21,9 @@ const Transactions = () => {
   const [modalContent, setModalContent] = useState('');
   const [modalLoading, setModalLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 10;
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [tenantFilter, setTenantFilter] = useState('all');
+  const [pageSize, setPageSize] = useState(5);
 
   useEffect(() => {
     void loadTransactionHistory();
@@ -205,42 +207,90 @@ const Transactions = () => {
     }).format(date);
   };
 
-  const totalPages = Math.max(1, Math.ceil(transactions.length / pageSize));
-  const startIndex = (currentPage - 1) * pageSize;
-  const paginatedTransactions = transactions.slice(startIndex, startIndex + pageSize);
+  const filteredTransactions = transactions.filter((tx) => {
+    const statusMatches = statusFilter === 'all' || tx.status.toLowerCase() === statusFilter.toLowerCase();
+    const tenantMatches = tenantFilter === 'all' || tx.tenant.toLowerCase() === tenantFilter.toLowerCase();
+    return statusMatches && tenantMatches;
+  });
+
+  const totalPages = Math.max(1, Math.ceil(filteredTransactions.length / pageSize));
+  const safePage = Math.min(currentPage, totalPages);
+  const startIndex = (safePage - 1) * pageSize;
+  const paginatedTransactions = filteredTransactions.slice(startIndex, startIndex + pageSize);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [statusFilter, tenantFilter, pageSize]);
+
+  const tenantOptions = Array.from(new Set(transactions.map((tx) => tx.tenant).filter(Boolean))).sort();
+
+  const resetFilters = () => {
+    setStatusFilter('all');
+    setTenantFilter('all');
+    setPageSize(10);
+    setCurrentPage(1);
+  };
 
   return (
     <div>
-      <div className="d-flex align-items-center justify-content-between mb-4">
-        <div>
-          <h2>💳 Transactions</h2>
-          <p className="text-muted mb-0">Transaction history from the document transformation pipeline.</p>
-        </div>
-        <Button variant="outline-secondary" size="sm" onClick={() => void loadTransactionHistory()} disabled={loading}>
-          {loading ? (
-            <><Spinner animation="border" size="sm" className="me-2" /> Refreshing</>
-          ) : '🔄 Refresh'}
-        </Button>
+      <div className="mb-3">
+        <h4 className="mb-0 fw-semibold" style={{ color: '#0f172a' }}>💳 Transactions</h4>
+        <small className="text-muted">Transaction history from the mule project transformation pipeline.</small>
       </div>
 
       <Card className="border-0 shadow-sm">
-        <Card.Header className="bg-light border-bottom d-flex justify-content-between align-items-center">
-          <Card.Title className="mb-0">Transaction History</Card.Title>
-          <span className="text-muted small">Showing EDI transformation documents</span>
-        </Card.Header>
         <Card.Body>
           {error && <div className="alert alert-danger py-2">{error}</div>}
 
-          <Table hover responsive>
+          <div className="d-flex flex-wrap align-items-end gap-3 mb-3 rounded-4 border bg-light-subtle p-3" style={{ borderColor: '#e5e7eb' }}>
+            <div style={{ minWidth: 170 }}>
+              <label className="small text-muted d-block mb-1">Status filter</label>
+              <Form.Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} size="sm">
+                <option value="all">All statuses</option>
+                <option value="uploaded">Uploaded</option>
+                <option value="processing">Processing</option>
+                <option value="pending">Pending</option>
+                <option value="success">Success</option>
+                <option value="complete">Complete</option>
+                <option value="failed">Failed</option>
+              </Form.Select>
+            </div>
+
+            <div style={{ minWidth: 170 }}>
+              <label className="small text-muted d-block mb-1">Tenant</label>
+              <Form.Select value={tenantFilter} onChange={(e) => setTenantFilter(e.target.value)} size="sm">
+                <option value="all">All tenants</option>
+                {tenantOptions.map((tenant) => (
+                  <option key={tenant} value={tenant}>{tenant}</option>
+                ))}
+              </Form.Select>
+            </div>
+
+            <div style={{ minWidth: 130 }}>
+              <label className="small text-muted d-block mb-1">Page size</label>
+              <Form.Select value={pageSize} onChange={(e) => setPageSize(Number(e.target.value))} size="sm">
+                <option value={5}>5</option>
+                <option value={10}>10</option>
+                <option value={20}>20</option>
+                <option value={50}>50</option>
+              </Form.Select>
+            </div>
+
+            <Button variant="outline-secondary" size="sm" onClick={resetFilters}>
+              Clear filters
+            </Button>
+          </div>
+
+          <Table hover responsive className="align-middle mb-0">
             <thead>
               <tr>
-                <th>Document ID</th>
-                <th>Name</th>
-                <th>Tenant</th>
-                <th>Type</th>
-                <th>Status</th>
-                <th>Updated</th>
-                <th>Actions</th>
+                <th className="small text-uppercase text-muted fw-semibold">Document ID</th>
+                <th className="small text-uppercase text-muted fw-semibold">Name</th>
+                <th className="small text-uppercase text-muted fw-semibold">Tenant</th>
+                <th className="small text-uppercase text-muted fw-semibold">Type</th>
+                <th className="small text-uppercase text-muted fw-semibold">Status</th>
+                <th className="small text-uppercase text-muted fw-semibold">Updated</th>
+                <th className="small text-uppercase text-muted fw-semibold">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -262,15 +312,7 @@ const Transactions = () => {
                         className="me-2"
                         onClick={() => void openArtifactModal(tx.documentId?.trim() || '', 'edixml')}
                       >
-                        EDI XML
-                      </Button>
-                      <Button
-                        variant="outline-secondary"
-                        size="sm"
-                        className="me-2"
-                        onClick={() => void openArtifactModal(tx.documentId?.trim() || '', 'idocxml')}
-                      >
-                        IDOC XML
+                        History
                       </Button>
                       <Button
                         variant="outline-danger"
@@ -286,24 +328,24 @@ const Transactions = () => {
               ) : (
                 <tr>
                   <td colSpan={7} className="text-center py-4 text-muted">
-                    {loading ? 'Loading transaction history…' : 'No transaction history available.'}
+                    {loading ? 'Loading transaction history…' : 'No transaction history available for the selected filters.'}
                   </td>
                 </tr>
               )}
             </tbody>
           </Table>
 
-          {transactions.length > 0 && (
-            <div className="d-flex justify-content-between align-items-center mt-3">
+          {filteredTransactions.length > 0 && (
+            <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mt-3">
               <span className="text-muted small">
-                Showing {startIndex + 1}-{Math.min(startIndex + pageSize, transactions.length)} of {transactions.length} transactions
+                Showing {filteredTransactions.length === 0 ? 0 : startIndex + 1}-{Math.min(startIndex + pageSize, filteredTransactions.length)} of {filteredTransactions.length} transactions
               </span>
-              <div className="d-flex gap-2">
-                <Button variant="outline-secondary" size="sm" onClick={() => setCurrentPage((page) => Math.max(1, page - 1))} disabled={currentPage === 1}>
+              <div className="d-flex gap-2 align-items-center">
+                <Button variant="outline-secondary" size="sm" onClick={() => setCurrentPage((page) => Math.max(1, page - 1))} disabled={safePage === 1}>
                   ← Previous
                 </Button>
-                <span className="align-self-center text-muted small">Page {currentPage} of {totalPages}</span>
-                <Button variant="outline-secondary" size="sm" onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))} disabled={currentPage === totalPages}>
+                <span className="align-self-center text-muted small">Page {safePage} of {totalPages}</span>
+                <Button variant="outline-secondary" size="sm" onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))} disabled={safePage === totalPages}>
                   Next →
                 </Button>
               </div>

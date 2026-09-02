@@ -474,7 +474,7 @@ const MuleTransform = () => {
   ];
 
   const renderWorkflowTimeline = (steps: WorkflowStep[]) => (
-    <div className="d-flex flex-column gap-3">
+    <div className="d-flex flex-column gap-3" style={{ maxHeight: '60vh', overflowY: 'auto', paddingRight: 6 }}>
       {steps.map((step, index) => {
         // Stage number corresponds to index + 1 (Stage 1-12)
         const isActive = step.status === 'active';
@@ -512,16 +512,9 @@ const MuleTransform = () => {
 
   return (
     <div className="py-3">
-      <div className="border rounded-4 p-4 mb-4 bg-light-subtle" style={{ borderColor: '#e5e7eb' }}>
-        <div className="d-flex flex-column flex-lg-row justify-content-between align-items-start gap-3">
-          <div>
-            <h2 className="mb-2">🔄 Mule Transformation</h2>
-            <p className="text-muted mb-0">Upload a ZIP file containing EDI content, submit it for transformation, and monitor the workflow status from the document API.</p>
-          </div>
-          <div className="d-flex flex-wrap gap-2 align-items-center">
-                    <span className="text-muted small">Ready to transform</span>
-                  </div>
-        </div>
+      <div className="mb-3">
+        <h4 className="mb-0 fw-semibold" style={{ color: '#0f172a' }}>Mule Transformation</h4>
+        <small className="text-muted">Upload and submit a ZIP file of Mule code to the re-engineering microservice for re-engineering and transformation.</small>
       </div>
 
       <Row className="g-4">
@@ -532,8 +525,8 @@ const MuleTransform = () => {
 
               <div className="d-flex justify-content-between align-items-center mb-3">
                 <div>
-                  <h5 className="mb-1">Upload & transform</h5>
-                  <p className="text-muted small mb-0">Complete the steps below to submit an EDI file.</p>
+                  <h5 className="mb-1 fw-semibold" style={{ color: '#0f172a' }}>Upload & transform</h5>
+                  <small className="text-muted">Complete the steps below to submit an EDI file.</small>
                 </div>
               </div>
 
@@ -562,7 +555,7 @@ const MuleTransform = () => {
                 <div className="p-3 rounded-3 border bg-light-subtle">
                   <div className="fw-semibold mb-2">Step 3 • Transform</div>
                   <Button variant="primary" onClick={handleTransform} disabled={!selectedTenant || !file || loading} className="w-100 py-2">
-                    {loading ? (<><Spinner animation="border" size="sm" /> <span className="ms-2">Transforming…</span></>) : '🚀 Transform EDI'}
+                    {loading ? (<><Spinner animation="border" size="sm" /> <span className="ms-2">Transforming…</span></>) : '🚀 Mule Transformation'}
                   </Button>
                 </div>
               </div>
@@ -574,15 +567,10 @@ const MuleTransform = () => {
         <Col lg={7}>
           <div className="d-flex flex-column gap-3">
             <Card className="border-0 shadow-sm rounded-4">
-              <Card.Header className="bg-white border-bottom d-flex justify-content-between align-items-center px-4 py-3">
+              <Card.Header className="bg-white border-bottom px-4 py-3">
                 <div>
-                  <Card.Title className="mb-0">Submission Status</Card.Title>
-                  <Card.Text className="text-muted mb-0">Results returned by the document API</Card.Text>
-                </div>
-                <div className="d-flex align-items-center gap-2">
-                  <Button variant="outline-secondary" size="sm" onClick={() => void refreshSubmissionStatus()} disabled={refreshingStatus || submissionState.status !== 'submitted'}>
-                    {refreshingStatus ? <><Spinner animation="border" size="sm" className="me-2" />Refreshing</> : '🔄 Refresh'}
-                  </Button>
+                  <Card.Title className="mb-0 fw-semibold" style={{ color: '#0f172a' }}>Submission Status</Card.Title>
+                  <Card.Text className="text-muted mb-0 small">Results returned by the document API</Card.Text>
                 </div>
               </Card.Header>
               <Card.Body className="p-4">
@@ -621,7 +609,7 @@ const MuleTransform = () => {
                     <div className="mb-3">Use the panel on the left to submit an EDI file and watch the workflow appear here.</div>
                     <div className="rounded-3 border bg-white p-3 text-start">
                       <div className="mb-3">
-                        <h6 className="mb-1">Workflow preview</h6>
+                        <h6 className="mb-1 fw-bold">Workflow preview</h6>
                       </div>
                       {renderWorkflowTimeline(placeholderWorkflowSteps)}
                     </div>
