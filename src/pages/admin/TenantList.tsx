@@ -133,23 +133,82 @@ const TenantList = () => {
 
   return (
     <div>
-      <div className="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-        <div>
-          <h4 className="mb-0 fw-semibold" style={{ color: '#0f172a' }}>🏢 Tenant Management</h4>
-          <small className="text-muted">Manage all tenants in the system</small>
+      <div className="tenant-header-banner mb-4">
+        <div className="d-flex align-items-center gap-3 flex-wrap">
+          <span className="tenant-icon-badge" aria-label="Tenant management">🏢</span>
+          <div className="tenant-header-text">Tenant Management</div>
         </div>
-        <Button
-          variant="primary"
-          size="sm"
-          className="rounded-pill px-3"
-          onClick={() => {
-            setEditingTenant(null);
-            setShowOnboard(true);
-          }}
-        >
-          + Create Tenant
-        </Button>
+        <div className="tenant-header-actions">
+          <Button
+            variant="light"
+            size="sm"
+            className="tenant-create-btn"
+            onClick={() => {
+              setEditingTenant(null);
+              setShowOnboard(true);
+            }}
+          >
+            + Create Tenant
+          </Button>
+        </div>
       </div>
+
+      <style>{`
+        .tenant-header-banner {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 1rem;
+          padding: 1.1rem 1.4rem;
+          border-radius: 1.4rem;
+          background: linear-gradient(135deg, rgba(15, 23, 42, 0.98) 0%, rgba(30, 41, 59, 0.96) 55%, rgba(79, 70, 229, 0.92) 100%);
+          box-shadow: 0 16px 30px rgba(15, 23, 42, 0.12);
+          border: 1px solid rgba(148, 163, 184, 0.2);
+        }
+
+        .tenant-icon-badge {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 2.5rem;
+          height: 2.5rem;
+          border-radius: 0.9rem;
+          background: rgba(255, 255, 255, 0.12);
+          border: 1px solid rgba(255, 255, 255, 0.18);
+          color: #f8fafc;
+          font-size: 1.2rem;
+          box-shadow: inset 0 1px 0 rgba(255,255,255,0.12);
+        }
+
+        .tenant-header-text {
+          color: #f8fafc;
+          font-size: clamp(1.8rem, 2vw, 2.7rem);
+          font-weight: 800;
+          letter-spacing: -0.06em;
+        }
+
+        .tenant-header-actions {
+          display: flex;
+          align-items: center;
+          gap: 0.75rem;
+        }
+
+        .tenant-create-btn {
+          border-radius: 999px !important;
+          font-weight: 700;
+          padding: 0.55rem 1rem;
+          background: rgba(255, 255, 255, 0.12) !important;
+          border: 1px solid rgba(255, 255, 255, 0.18) !important;
+          color: #ffffff !important;
+        }
+
+        @media (max-width: 767px) {
+          .tenant-header-banner {
+            flex-direction: column;
+            align-items: flex-start;
+          }
+        }
+      `}</style>
 
       <Card className="border-0 shadow-sm">
         <Card.Body>

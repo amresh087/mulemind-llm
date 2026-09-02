@@ -512,10 +512,47 @@ const MuleTransform = () => {
 
   return (
     <div className="py-3">
-      <div className="mb-3">
-        <h4 className="mb-0 fw-semibold" style={{ color: '#0f172a' }}>Mule Transformation</h4>
-        <small className="text-muted">Upload and submit a ZIP file of Mule code to the re-engineering microservice for re-engineering and transformation.</small>
+      <div className="transform-header-banner mb-4">
+        <div className="d-flex align-items-center gap-3 flex-wrap">
+          <span className="transform-icon-badge" aria-label="Mule transformation">🔄</span>
+          <div className="transform-header-text">Mule Transformation</div>
+        </div>
       </div>
+
+      <style>{`
+        .transform-header-banner {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 1rem;
+          padding: 1.1rem 1.4rem;
+          border-radius: 1.4rem;
+          background: linear-gradient(135deg, rgba(15, 23, 42, 0.98) 0%, rgba(30, 41, 59, 0.96) 55%, rgba(79, 70, 229, 0.92) 100%);
+          box-shadow: 0 16px 30px rgba(15, 23, 42, 0.12);
+          border: 1px solid rgba(148, 163, 184, 0.2);
+        }
+
+        .transform-icon-badge {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 2.5rem;
+          height: 2.5rem;
+          border-radius: 0.9rem;
+          background: rgba(255, 255, 255, 0.12);
+          border: 1px solid rgba(255, 255, 255, 0.18);
+          color: #f8fafc;
+          font-size: 1.2rem;
+          box-shadow: inset 0 1px 0 rgba(255,255,255,0.12);
+        }
+
+        .transform-header-text {
+          color: #f8fafc;
+          font-size: clamp(1.8rem, 2vw, 2.7rem);
+          font-weight: 800;
+          letter-spacing: -0.06em;
+        }
+      `}</style>
 
       <Row className="g-4">
         <Col lg={5}>

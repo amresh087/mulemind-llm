@@ -233,10 +233,47 @@ const Transactions = () => {
 
   return (
     <div>
-      <div className="mb-3">
-        <h4 className="mb-0 fw-semibold" style={{ color: '#0f172a' }}>💳 Transactions</h4>
-        <small className="text-muted">Transaction history from the mule project transformation pipeline.</small>
+      <div className="transactions-header-banner mb-4">
+        <div className="d-flex align-items-center gap-3 flex-wrap">
+          <span className="transactions-icon-badge" aria-label="Transactions">💳</span>
+          <div className="transactions-header-text">Transactions</div>
+        </div>
       </div>
+
+      <style>{`
+        .transactions-header-banner {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 1rem;
+          padding: 1.1rem 1.4rem;
+          border-radius: 1.4rem;
+          background: linear-gradient(135deg, rgba(15, 23, 42, 0.98) 0%, rgba(30, 41, 59, 0.96) 55%, rgba(79, 70, 229, 0.92) 100%);
+          box-shadow: 0 16px 30px rgba(15, 23, 42, 0.12);
+          border: 1px solid rgba(148, 163, 184, 0.2);
+        }
+
+        .transactions-icon-badge {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 2.5rem;
+          height: 2.5rem;
+          border-radius: 0.9rem;
+          background: rgba(255, 255, 255, 0.12);
+          border: 1px solid rgba(255, 255, 255, 0.18);
+          color: #f8fafc;
+          font-size: 1.2rem;
+          box-shadow: inset 0 1px 0 rgba(255,255,255,0.12);
+        }
+
+        .transactions-header-text {
+          color: #f8fafc;
+          font-size: clamp(1.8rem, 2vw, 2.7rem);
+          font-weight: 800;
+          letter-spacing: -0.06em;
+        }
+      `}</style>
 
       <Card className="border-0 shadow-sm">
         <Card.Body>
