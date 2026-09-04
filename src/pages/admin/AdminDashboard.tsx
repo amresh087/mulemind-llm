@@ -221,7 +221,6 @@ const AdminDashboard = () => {
             </Card.Body>
           </Card>
         </Col>
-
         <Col lg={5}>
           <Card className="panel-card border-0 shadow-sm h-100">
             <Card.Header className="panel-header border-0 bg-transparent">
@@ -245,6 +244,7 @@ const AdminDashboard = () => {
           </Card>
         </Col>
       </Row>
+
     </div>
   );
 };

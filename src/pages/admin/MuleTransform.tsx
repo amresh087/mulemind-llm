@@ -1,5 +1,6 @@
 import { Card, Button, Row, Col, Form, Alert, Spinner, Modal } from 'react-bootstrap';
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { documentService } from '../../services/documentService';
 import { tenantService, type TenantRecord } from '../../services/tenantService';
 
@@ -29,6 +30,7 @@ const MuleTransform = () => {
   const [refreshingStatus, setRefreshingStatus] = useState(false);
   const [error, setError] = useState('');
   const [tenantOptions, setTenantOptions] = useState<TenantRecord[]>([]);
+  const [showDocumentsModal, setShowDocumentsModal] = useState(false);
 
   const [submissionState, setSubmissionState] = useState<SubmissionState>({
     status: 'idle',
@@ -126,7 +128,7 @@ const MuleTransform = () => {
       const recognized = isRecognizedServerStatus(candidateStatus);
       const latestStatus = recognized ? candidateStatus : submissionState.documentStatus || 'Created';
       const normalizedStatus = latestStatus.toLowerCase();
-      const nextMessage = normalizedStatus.includes('complete') || normalizedStatus.includes('success')
+      const nextMessage = normalizedStatus.includes('complete') || normalizedStatus.includes('success') || normalizedStatus.includes('done')
         ? 'The workflow completed successfully.'
         : normalizedStatus.includes('process') || normalizedStatus.includes('running')
           ? 'The workflow is still processing. Click refresh again for the latest update.'
@@ -318,7 +320,7 @@ const MuleTransform = () => {
       step3: workflowStage >= 3 ? (workflowStage === 3 ? 'active' : 'completed') : 'pending',
       step4: workflowStage >= 4 ? (workflowStage === 4 ? 'active' : 'completed') : 'pending',
       step5: workflowStage >= 5 ? (workflowStage === 5 ? 'active' : 'completed') : 'pending',
-      step6: workflowStage >= 6 ? (workflowStage === 6 ? 'active' : 'completed') : 'pending',
+      step6: workflowStage >= 6 ? 'completed' : 'pending',
       step7: isFailed ? 'failed' : workflowStage >= 7 ? 'completed' : 'pending',
     };
   };
@@ -437,6 +439,11 @@ const MuleTransform = () => {
                 <div className="fw-semibold d-flex align-items-center">
                   {isActive && <Spinner animation="border" size="sm" className="me-2" />}
                   <span>{step.title}</span>
+                  {step.title.startsWith('6.') && isCompleted && (
+                    <Button variant="success" size="sm" className="ms-3" onClick={() => setShowDocumentsModal(true)}>
+                      📄 Documents
+                    </Button>
+                  )}
                 </div>
                 <div className="text-muted small">{step.caption}</div>
                 <div className="mt-2 small text-muted">
@@ -599,6 +606,37 @@ const MuleTransform = () => {
           </div>
         </Col>
       </Row>
+
+      <Modal show={showDocumentsModal} onHide={() => setShowDocumentsModal(false)} centered>
+        <Modal.Header closeButton>
+          <Modal.Title>Completed document</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <div className="d-flex flex-column gap-3">
+            <div>
+              <div className="text-uppercase small text-muted">Transformation ID</div>
+              <div className="fw-semibold text-break">{submissionState.transformationId || '—'}</div>
+            </div>
+            <div>
+              <div className="text-uppercase small text-muted">Status</div>
+              <div className="fw-semibold">{submissionState.documentStatus || 'Completed'}</div>
+            </div>
+            <div>
+              <div className="text-uppercase small text-muted">Completed at</div>
+              <div>{formatDateTime(submissionState.updatedAt)}</div>
+            </div>
+            <div className="alert alert-success mb-0">
+              {submissionState.message || 'The document transformation completed successfully.'}
+            </div>
+          </div>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setShowDocumentsModal(false)}>Close</Button>
+          <Link to="/admin/transactions" className="btn btn-primary" onClick={() => setShowDocumentsModal(false)}>
+            View all documents
+          </Link>
+        </Modal.Footer>
+      </Modal>
 
     </div>
   );

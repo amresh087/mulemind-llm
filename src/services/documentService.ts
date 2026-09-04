@@ -49,6 +49,12 @@ export interface TransformationJobStatus {
   updatedAt?: string;
 }
 
+export interface ReportDocument {
+  type: string;
+  fileName: string;
+  url: string;
+}
+
 interface UpdateTransformationJobPayload {
   documentId?: string;
   jobName?: string;
@@ -141,6 +147,18 @@ export const documentService = {
       }
       throw error;
     }
+  },
+
+  listReports: async (documentId: string): Promise<ReportDocument[]> => {
+    const response = await api.get<ReportDocument[]>(`/reports/${encodeURIComponent(documentId)}/documents`);
+    return Array.isArray(response.data) ? response.data : [];
+  },
+
+  getReport: async (documentId: string, reportType: string): Promise<Blob> => {
+    const response = await api.get(`/reports/${encodeURIComponent(documentId)}/documents/${encodeURIComponent(reportType)}`, {
+      responseType: 'blob',
+    });
+    return response.data as Blob;
   },
 
   updateTransformationJobStatus: async (jobId: string, status: string, payload?: string): Promise<TransformationJobStatus | null> => {

@@ -2,6 +2,22 @@
 :root {
   --bs-body-bg: #eef4ff;
   --bs-body-color: #0f172a;
+
+.main-layout-shell {
+  gap: 0;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.main-layout-content {
+  padding: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.main-layout-footer {
+  flex-shrink: 0;
+}
   --bs-border-color: rgba(148, 163, 184, 0.2);
   --bs-primary: #4f46e5;
   --bs-secondary: #64748b;

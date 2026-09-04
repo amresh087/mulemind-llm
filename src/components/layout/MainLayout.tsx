@@ -4,16 +4,9 @@ import Footer from "./Footer";
 
 const MainLayout = ({ children }: { children: React.ReactNode }) => {
   return (
-    <div
-      className="d-flex flex-column bg-light"
-      style={{
-        gap: 0,
-        height: '100vh',
-        overflow: 'hidden',
-      }}
-    >
+    <div className="main-layout-shell d-flex flex-column bg-light">
       <Navbar />
-      <main className="flex-grow-1" style={{ padding: 0, minHeight: 0, overflow: 'hidden' }}>{children}</main>
+      <main className="main-layout-content flex-grow-1">{children}</main>
       <Footer />
     </div>
   );

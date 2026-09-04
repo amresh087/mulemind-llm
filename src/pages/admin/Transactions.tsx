@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Card, Table, Button, Badge, Spinner, Modal, Form } from 'react-bootstrap';
-import { documentService, type DocumentRecord } from '../../services/documentService';
+import { Card, Table, Button, Badge, Spinner, Modal, Form, Pagination } from 'react-bootstrap';
+import { documentService, type ReportDocument } from '../../services/documentService';
 
 type TransactionHistoryRow = {
   documentId: string;
@@ -15,11 +15,14 @@ const Transactions = () => {
   const [transactions, setTransactions] = useState<TransactionHistoryRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [reportLoadingId, setReportLoadingId] = useState<string | null>(null);
+  const [reports, setReports] = useState<ReportDocument[]>([]);
+  const [reportDocumentId, setReportDocumentId] = useState('');
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewTitle, setPreviewTitle] = useState('');
   const [error, setError] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [modalTitle, setModalTitle] = useState('');
-  const [modalContent, setModalContent] = useState('');
-  const [modalLoading, setModalLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState('all');
   const [tenantFilter, setTenantFilter] = useState('all');
@@ -81,103 +84,60 @@ const Transactions = () => {
     }
   };
 
-  const openArtifactModal = async (documentId: string, xmlType: 'edixml' | 'idocxml') => {
+  const handleOpenReportList = async (documentId: string) => {
     if (!documentId) return;
 
-    setModalLoading(true);
-    setModalOpen(true);
-    setModalTitle(xmlType === 'edixml' ? 'EDI XML' : 'IDOC XML');
-    setModalContent('');
+    setReportLoadingId(documentId);
+    setError('');
 
     try {
-      const content = await documentService.getTransactionXml(documentId, xmlType);
-      setModalContent(content || 'No artifact available yet.');
+      const reportList = await documentService.listReports(documentId);
+      setReports(reportList);
+      setReportDocumentId(documentId);
+      setModalTitle('Available reports');
+      setModalOpen(true);
     } catch (err) {
-      console.error('Unable to load artifact', err);
-      setModalContent('Unable to load artifact right now.');
+      console.error('Unable to load transaction reports', err);
+      setError('Unable to load reports for this transaction right now.');
     } finally {
-      setModalLoading(false);
+      setReportLoadingId(null);
     }
   };
 
-  const formatXmlContent = (value: string) => {
-    const trimmed = value?.trim() || '';
-    if (!trimmed) return '';
-
+  const openReport = async (documentId: string, reportType: string, download: boolean) => {
     try {
-      const parser = new DOMParser();
-      const document = parser.parseFromString(trimmed, 'application/xml');
-      const parserError = document.querySelector('parsererror');
-      if (parserError) {
-        throw new Error('Invalid XML payload');
-      }
-
-      const escapeXml = (value: string) =>
-        value
-          .replace(/&/g, '&amp;')
-          .replace(/</g, '&lt;')
-          .replace(/>/g, '&gt;')
-          .replace(/"/g, '&quot;')
-          .replace(/'/g, '&apos;');
-
-      const formatNode = (node: Node, level: number): string => {
-        const indent = '  '.repeat(level);
-        if (node.nodeType === Node.TEXT_NODE) {
-          const text = node.textContent?.trim();
-          return text ? `${indent}${escapeXml(text)}` : '';
-        }
-
-        if (node.nodeType !== Node.ELEMENT_NODE) {
-          return '';
-        }
-
-        const element = node as Element;
-        const attributes = Array.from(element.attributes)
-          .map((attribute) => `${attribute.name}="${escapeXml(attribute.value)}"`)
-          .join(' ');
-        const openingTag = `<${element.tagName}${attributes ? ` ${attributes}` : ''}>`;
-        const closingTag = `</${element.tagName}>`;
-        const childNodes = Array.from(element.childNodes).filter((child) => {
-          if (child.nodeType === Node.TEXT_NODE) return !!child.textContent?.trim();
-          return child.nodeType === Node.ELEMENT_NODE;
+      const report = await documentService.getReport(documentId, reportType);
+      const reportUrl = URL.createObjectURL(report);
+      if (download) {
+        const link = document.createElement('a');
+        link.href = reportUrl;
+        link.download = `${documentId}-${reportType}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } else {
+        setModalOpen(false);
+        setPreviewTitle(`${reportType} report`);
+        setPreviewUrl((currentUrl) => {
+          if (currentUrl) URL.revokeObjectURL(currentUrl);
+          return reportUrl;
         });
-
-        const childElements = childNodes.filter((child): child is Element => child.nodeType === Node.ELEMENT_NODE);
-        const textChildren = childNodes.filter((child) => child.nodeType === Node.TEXT_NODE);
-        const hasOnlyTextChild = childElements.length === 0 && textChildren.length === 1;
-
-        if (!childNodes.length) {
-          return `${indent}${openingTag}${closingTag}`;
-        }
-
-        if (hasOnlyTextChild) {
-          const textValue = textChildren[0].textContent?.trim() ?? '';
-          return `${indent}${openingTag}${escapeXml(textValue)}${closingTag}`;
-        }
-
-        const innerContent = childNodes.map((child) => formatNode(child, level + 1)).filter(Boolean).join('\n');
-        return `${indent}${openingTag}\n${innerContent}\n${indent}${closingTag}`;
-      };
-
-      const root = document.documentElement;
-      return root ? formatNode(root, 0) : trimmed;
-    } catch {
-      return trimmed;
+      }
+      if (download) {
+        window.setTimeout(() => URL.revokeObjectURL(reportUrl), 60_000);
+      }
+    } catch (err) {
+      console.error('Unable to open transaction report', err);
+      setError(`Unable to ${download ? 'download' : 'preview'} this report right now.`);
     }
   };
 
-  const handleDownloadArtifact = () => {
-    if (!modalContent) return;
-
-    const blob = new Blob([modalContent], { type: 'application/xml;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `${modalTitle.toLowerCase().replace(/\s+/g, '-')}.xml`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+  const closePreview = () => {
+    setPreviewUrl((currentUrl) => {
+      if (currentUrl) URL.revokeObjectURL(currentUrl);
+      return null;
+    });
+    setModalOpen(true);
   };
 
   const getStatusColor = (status: string) => {
@@ -273,14 +233,79 @@ const Transactions = () => {
           font-weight: 800;
           letter-spacing: -0.06em;
         }
+
+        .transactions-filters {
+          border-color: #e5e7eb !important;
+        }
+
+        .transactions-filter-field {
+          min-width: 170px;
+        }
+
+        .transactions-page-size-field {
+          min-width: 130px;
+        }
+
+        .transactions-pagination-bar {
+          display: block !important;
+          width: 100%;
+          min-height: 8.5rem;
+          position: relative;
+          z-index: 2;
+          background: #fff;
+          border-top: 1px solid #e5e7eb;
+          padding-top: 1rem;
+        }
+
+        .transactions-pagination {
+          display: flex;
+          flex-wrap: wrap;
+          justify-content: flex-end;
+          margin-bottom: 0;
+        }
+
+        .transactions-pagination .page-link {
+          min-width: 2.25rem;
+          text-align: center;
+          font-weight: 600;
+        }
+
+        .transactions-table-wrapper {
+          overflow-x: auto;
+          overflow-y: visible;
+        }
+
+        .transactions-table-wrapper table {
+          min-width: 960px;
+        }
+
+        .transactions-table-body tr {
+          height: 3.5rem;
+        }
+
+        .transactions-artifact-preview {
+          white-space: pre-wrap;
+          font-size: 0.85rem;
+          max-height: 60vh;
+          overflow: auto;
+        }
+
+        @media (max-width: 575.98px) {
+          .transactions-pagination {
+            justify-content: flex-start;
+            overflow-x: auto;
+            flex-wrap: nowrap;
+            padding-bottom: 0.25rem;
+          }
+        }
       `}</style>
 
       <Card className="border-0 shadow-sm">
         <Card.Body>
           {error && <div className="alert alert-danger py-2">{error}</div>}
 
-          <div className="d-flex flex-wrap align-items-end gap-3 mb-3 rounded-4 border bg-light-subtle p-3" style={{ borderColor: '#e5e7eb' }}>
-            <div style={{ minWidth: 170 }}>
+          <div className="transactions-filters d-flex flex-wrap align-items-end gap-3 mb-3 rounded-4 border bg-light-subtle p-3">
+            <div className="transactions-filter-field">
               <label className="small text-muted d-block mb-1">Status filter</label>
               <Form.Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} size="sm">
                 <option value="all">All statuses</option>
@@ -293,7 +318,7 @@ const Transactions = () => {
               </Form.Select>
             </div>
 
-            <div style={{ minWidth: 170 }}>
+            <div className="transactions-filter-field">
               <label className="small text-muted d-block mb-1">Tenant</label>
               <Form.Select value={tenantFilter} onChange={(e) => setTenantFilter(e.target.value)} size="sm">
                 <option value="all">All tenants</option>
@@ -303,7 +328,7 @@ const Transactions = () => {
               </Form.Select>
             </div>
 
-            <div style={{ minWidth: 130 }}>
+            <div className="transactions-page-size-field">
               <label className="small text-muted d-block mb-1">Page size</label>
               <Form.Select value={pageSize} onChange={(e) => setPageSize(Number(e.target.value))} size="sm">
                 <option value={5}>5</option>
@@ -318,98 +343,133 @@ const Transactions = () => {
             </Button>
           </div>
 
-          <Table hover responsive className="align-middle mb-0">
-            <thead>
-              <tr>
-                <th className="small text-uppercase text-muted fw-semibold">Document ID</th>
-                <th className="small text-uppercase text-muted fw-semibold">Name</th>
-                <th className="small text-uppercase text-muted fw-semibold">Tenant</th>
-                <th className="small text-uppercase text-muted fw-semibold">Type</th>
-                <th className="small text-uppercase text-muted fw-semibold">Status</th>
-                <th className="small text-uppercase text-muted fw-semibold">Updated</th>
-                <th className="small text-uppercase text-muted fw-semibold">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {paginatedTransactions.length > 0 ? (
-                paginatedTransactions.map((tx) => (
-                  <tr key={tx.documentId}>
-                    <td className="fw-medium">{tx.documentId}</td>
-                    <td>{tx.name}</td>
-                    <td>{tx.tenant}</td>
-                    <td>{tx.transactionTypeCode}</td>
-                    <td>
-                      <Badge bg={getStatusColor(tx.status)}>{tx.status}</Badge>
-                    </td>
-                    <td>{formatUpdatedAt(tx.updatedAt)}</td>
-                    <td>
-                      <Button
-                        variant="outline-primary"
-                        size="sm"
-                        className="me-2"
-                        onClick={() => void openArtifactModal(tx.documentId?.trim() || '', 'edixml')}
-                      >
-                        History
-                      </Button>
-                      <Button
-                        variant="outline-danger"
-                        size="sm"
-                        onClick={() => void handleDeleteTransaction(tx.documentId?.trim() || '')}
-                        disabled={deletingId === tx.documentId}
-                      >
-                        {deletingId === tx.documentId ? <Spinner animation="border" size="sm" /> : '🗑 Delete'}
-                      </Button>
+          <div className="table-responsive transactions-table-wrapper">
+            <Table hover className="align-middle mb-0">
+              <thead>
+                <tr>
+                  <th className="small text-uppercase text-muted fw-semibold">Document ID</th>
+                  <th className="small text-uppercase text-muted fw-semibold">Name</th>
+                  <th className="small text-uppercase text-muted fw-semibold">Tenant</th>
+                  <th className="small text-uppercase text-muted fw-semibold">Type</th>
+                  <th className="small text-uppercase text-muted fw-semibold">Status</th>
+                  <th className="small text-uppercase text-muted fw-semibold">Updated</th>
+                  <th className="small text-uppercase text-muted fw-semibold">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="transactions-table-body">
+                {paginatedTransactions.length > 0 ? (
+                  paginatedTransactions.map((tx, index) => (
+                    <tr key={`${tx.documentId}-${startIndex + index}`}>
+                      <td className="fw-medium">{tx.documentId}</td>
+                      <td>{tx.name}</td>
+                      <td>{tx.tenant}</td>
+                      <td>{tx.transactionTypeCode}</td>
+                      <td>
+                        <Badge bg={getStatusColor(tx.status)}>{tx.status}</Badge>
+                      </td>
+                      <td>{formatUpdatedAt(tx.updatedAt)}</td>
+                      <td>
+                        <Button
+                          variant="outline-primary"
+                          size="sm"
+                          className="me-2"
+                          aria-label="View transaction history"
+                          title="View transaction history"
+                          onClick={() => void handleOpenReportList(tx.documentId?.trim() || '')}
+                          disabled={reportLoadingId === tx.documentId}
+                        >
+                          {reportLoadingId === tx.documentId ? <Spinner animation="border" size="sm" /> : '📄'}
+                        </Button>
+                        <Button
+                          variant="outline-danger"
+                          size="sm"
+                          aria-label="Delete transaction"
+                          title="Delete transaction"
+                          onClick={() => void handleDeleteTransaction(tx.documentId?.trim() || '')}
+                          disabled={deletingId === tx.documentId}
+                        >
+                          {deletingId === tx.documentId ? <Spinner animation="border" size="sm" /> : '🗑'}
+                        </Button>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={7} className="text-center py-4 text-muted">
+                      {loading ? 'Loading transaction history…' : 'No transaction history available for the selected filters.'}
                     </td>
                   </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan={7} className="text-center py-4 text-muted">
-                    {loading ? 'Loading transaction history…' : 'No transaction history available for the selected filters.'}
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </Table>
+                )}
+              </tbody>
+            </Table>
+          </div>
 
-          {filteredTransactions.length > 0 && (
-            <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mt-3">
-              <span className="text-muted small">
-                Showing {filteredTransactions.length === 0 ? 0 : startIndex + 1}-{Math.min(startIndex + pageSize, filteredTransactions.length)} of {filteredTransactions.length} transactions
-              </span>
-              <div className="d-flex gap-2 align-items-center">
-                <Button variant="outline-secondary" size="sm" onClick={() => setCurrentPage((page) => Math.max(1, page - 1))} disabled={safePage === 1}>
-                  ← Previous
-                </Button>
-                <span className="align-self-center text-muted small">Page {safePage} of {totalPages}</span>
-                <Button variant="outline-secondary" size="sm" onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))} disabled={safePage === totalPages}>
-                  Next →
-                </Button>
-              </div>
-            </div>
-          )}
         </Card.Body>
+        <Card.Footer className="transactions-pagination-bar">
+          <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
+            <span className="text-muted small">
+              {filteredTransactions.length > 0
+                ? `Showing ${startIndex + 1}-${Math.min(startIndex + pageSize, filteredTransactions.length)} of ${filteredTransactions.length} transactions`
+                : 'Showing 0 transactions'}
+            </span>
+            <Pagination size="sm" className="transactions-pagination" aria-label="Transactions pages">
+              <Pagination.First onClick={() => setCurrentPage(1)} disabled={safePage === 1 || filteredTransactions.length === 0} />
+              <Pagination.Prev onClick={() => setCurrentPage((page) => Math.max(1, page - 1))} disabled={safePage === 1 || filteredTransactions.length === 0} />
+              {Array.from({ length: totalPages }, (_, index) => index + 1).map((page) => (
+                <Pagination.Item key={page} active={page === safePage} onClick={() => setCurrentPage(page)} disabled={filteredTransactions.length === 0}>
+                  {page}
+                </Pagination.Item>
+              ))}
+              <Pagination.Next onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))} disabled={safePage === totalPages || filteredTransactions.length === 0} />
+              <Pagination.Last onClick={() => setCurrentPage(totalPages)} disabled={safePage === totalPages || filteredTransactions.length === 0} />
+            </Pagination>
+          </div>
+        </Card.Footer>
       </Card>
 
       <Modal show={modalOpen} onHide={() => setModalOpen(false)} size="lg" centered>
         <Modal.Header closeButton>
           <Modal.Title>{modalTitle}</Modal.Title>
         </Modal.Header>
-        <Modal.Body>
-          {modalLoading ? (
-            <div className="d-flex align-items-center gap-2 text-muted">
-              <Spinner animation="border" size="sm" /> Loading artifact...
+        <Modal.Body style={{ minHeight: '45vh', maxHeight: '65vh', overflowY: 'auto' }}>
+          {reports.length > 0 ? (
+            <div className="list-group">
+              {reports.map((report) => (
+                <div key={report.fileName} className="list-group-item d-flex align-items-center justify-content-between gap-3">
+                  <span className="fw-semibold">{report.fileName}</span>
+                  <div className="d-flex gap-2">
+                    <Button variant="outline-primary" size="sm" onClick={() => void openReport(reportDocumentId, report.type, false)}>
+                      Preview
+                    </Button>
+                    <Button variant="outline-secondary" size="sm" onClick={() => void openReport(reportDocumentId, report.type, true)}>
+                      Download
+                    </Button>
+                  </div>
+                </div>
+              ))}
             </div>
           ) : (
-            <pre style={{ whiteSpace: 'pre-wrap', fontSize: '0.85rem', maxHeight: '60vh', overflow: 'auto' }}>{formatXmlContent(modalContent)}</pre>
+            <div className="text-muted">No reports are available for this transaction.</div>
           )}
         </Modal.Body>
         <Modal.Footer>
-          <Button variant="outline-primary" onClick={handleDownloadArtifact} disabled={!modalContent || modalLoading}>
-            ⬇ Download
-          </Button>
           <Button variant="secondary" onClick={() => setModalOpen(false)}>Close</Button>
         </Modal.Footer>
+      </Modal>
+
+      <Modal show={Boolean(previewUrl)} onHide={closePreview} size="xl" centered>
+        <Modal.Header closeButton>
+          <Modal.Title>{previewTitle}</Modal.Title>
+        </Modal.Header>
+        <Modal.Body className="p-0" style={{ height: '80vh' }}>
+          {previewUrl && (
+            <iframe
+              title={previewTitle}
+              src={previewUrl}
+              style={{ width: '100%', height: '100%', border: 0 }}
+            />
+          )}
+        </Modal.Body>
       </Modal>
     </div>
   );
