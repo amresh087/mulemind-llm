@@ -43,7 +43,7 @@ const MuleTransform = () => {
   const isRecognizedServerStatus = (status?: string) => {
     if (!status) return false;
     const normalized = status.trim().toUpperCase();
-    const canonical = /^(CREATED|UPLOADED|SCANNING|SCAN_COMPLETED|METADATA_PROCESSING|METADATA_COMPLETED|AI_ANALYZING|AI_ANALYSIS_COMPLETED|DOCUMENT_GENRATING|DOCUMENT_COMPLETED|COMPLETED|FAILED|SUBMITTED|PENDING|CANCELLED)$/;
+    const canonical = /^(CREATED|UPLOADED|SCANNING|METADATA_PROCESSING|SCAN_COMPLETED|AI_ANALYZING|AI_ANALYSIS_COMPLETED|DOCUMENT_GENRATING|DOCUMENT_COMPLETED|COMPLETED|FAILED|SUBMITTED|PENDING|CANCELLED)$/;
     if (canonical.test(normalized)) return true;
     if (status.includes('=') || status.includes(';')) return false; // metadata
     return /^[A-Z_]+$/.test(normalized);
@@ -59,12 +59,12 @@ const MuleTransform = () => {
     }
 
     const normalized = (submissionState.documentStatus || '').trim().toLowerCase();
-    const shouldAutoPoll = /created|uploaded|scanning|scan_completed|metadata_processing|metadata_completed|ai_analyzing|ai_analysis_completed|document_genrating|document_generating|pending|processing|running|queued|submitted/i.test(normalized);
+    const shouldAutoPoll = /created|uploaded|scanning|metadata_processing|scan_completed|ai_analyzing|ai_analysis_completed|document_genrating|document_generating|pending|processing|running|queued|submitted/i.test(normalized);
     if (!shouldAutoPoll) {
       return;
     }
 
-    const fastPoll = /scanning|ai_analyzing|document_genrating|document_generating|processing|running/.test(normalized);
+    const fastPoll = /scanning|metadata_processing|ai_analyzing|document_genrating|document_generating|processing|running/.test(normalized);
     const intervalMs = fastPoll ? 2000 : 5000;
 
     const timer = window.setInterval(() => {
@@ -153,18 +153,13 @@ const MuleTransform = () => {
 
   const getWorkflowStage = (status: string) => {
     const normalized = status.trim().toLowerCase();
-    if (normalized.includes('failed')) return 12;
-    if (normalized.includes('document_complted') || normalized.includes('document_completed')) return 10;
-    if (normalized.includes('document_genrating') || normalized.includes('document_generating')) return 9;
-    if (normalized.includes('ai_analysis_completed')) return 8;
-    if (normalized.includes('ai_analyzing')) return 7;
-    if (normalized.includes('metadata_completed')) return 6;
-    if (normalized.includes('metadata_processing')) return 5;
-    if (normalized.includes('scan_completed')) return 4;
-    if (normalized.includes('scanning')) return 3;
-    if (normalized.includes('uploaded')) return 2;
-    if (normalized.includes('created')) return 1;
-    if (normalized.includes('complete') || normalized.includes('success') || normalized.includes('done')) return 11;
+    if (normalized.includes('failed')) return 7;
+    if (normalized.includes('complete') || normalized.includes('success') || normalized.includes('done')) return 6;
+    if (normalized.includes('document_complted') || normalized.includes('document_completed') || normalized.includes('document_genrating') || normalized.includes('document_generating')) return 5;
+    if (normalized.includes('metadata_processing')) return 4;
+    if (normalized.includes('ai_analysis_completed') || normalized.includes('ai_analyzing')) return 3;
+    if (normalized.includes('scan_completed') || normalized.includes('scanning')) return 2;
+    if (normalized.includes('uploaded') || normalized.includes('created')) return 1;
     return 1;
   };
 
@@ -257,7 +252,7 @@ const MuleTransform = () => {
     if (normalized.includes('completed') || normalized.includes('success') || normalized.includes('done')) {
       return 'success';
     }
-    if (/created|uploaded|scanning|scan_completed|metadata_processing|metadata_completed|ai_analyzing|ai_analysis_completed|document_genrating|document_generating|processing|running|queue|pending|submitted/i.test(normalized)) {
+    if (/created|uploaded|scanning|metadata_processing|scan_completed|ai_analyzing|ai_analysis_completed|document_genrating|document_generating|processing|running|queue|pending|submitted/i.test(normalized)) {
       return 'warning';
     }
     return 'secondary';
@@ -266,20 +261,15 @@ const MuleTransform = () => {
   const getWorkflowStageLabel = (status: string) => {
     const workflowStage = getWorkflowStage(status);
     const stageLabels: { [key: number]: string } = {
-      1: 'Stage 1 • Created',
-      2: 'Stage 2 • Uploaded',
-      3: 'Stage 3 • Scanning',
-      4: 'Stage 4 • Scan Completed',
-      5: 'Stage 5 • MetaData Processing',
-      6: 'Stage 6 • MetaData Completed',
-      7: 'Stage 7 • AI Analyzing',
-      8: 'Stage 8 • AI Analysis Completed',
-      9: 'Stage 9 • Document Generating',
-      10: 'Stage 10 • Document Completed',
-      11: 'Stage 11 • Completed',
-      12: 'Stage 12 • Failed',
+      1: 'Stage 1 • Uploaded',
+      2: 'Stage 2 • Scanning',
+      3: 'Stage 3 • AI Analyzing',
+      4: 'Stage 4 • Metadata Processing',
+      5: 'Stage 5 • Document Generating',
+      6: 'Stage 6 • Completed',
+      7: 'Stage 7 • Failed',
     };
-    return stageLabels[workflowStage] || 'Stage 1 • Created';
+    return stageLabels[workflowStage] || 'Stage 1 • Uploaded';
   };
 
   const parseDate = (value?: string) => {
@@ -329,12 +319,7 @@ const MuleTransform = () => {
       step4: workflowStage >= 4 ? (workflowStage === 4 ? 'active' : 'completed') : 'pending',
       step5: workflowStage >= 5 ? (workflowStage === 5 ? 'active' : 'completed') : 'pending',
       step6: workflowStage >= 6 ? (workflowStage === 6 ? 'active' : 'completed') : 'pending',
-      step7: workflowStage >= 7 ? (workflowStage === 7 ? 'active' : 'completed') : 'pending',
-      step8: workflowStage >= 8 ? (workflowStage === 8 ? 'active' : 'completed') : 'pending',
-      step9: workflowStage >= 9 ? (workflowStage === 9 ? 'active' : 'completed') : 'pending',
-      step10: workflowStage >= 10 ? (workflowStage === 10 ? 'active' : 'completed') : 'pending',
-      step11: workflowStage >= 11 ? (workflowStage === 11 ? 'active' : 'completed') : 'pending',
-      step12: isFailed ? 'failed' : workflowStage >= 12 ? 'completed' : 'pending',
+      step7: isFailed ? 'failed' : workflowStage >= 7 ? 'completed' : 'pending',
     };
   };
 
@@ -357,101 +342,61 @@ const MuleTransform = () => {
     const stage3DurationLabel = stage3DurationMs ? (Math.floor(stage3DurationMs / 1000) + 's') : (workflowStage === 3 ? formatDuration(statusUpdatedAt?.toISOString(), now.toISOString()) : '—');
 
     return [
-      // Stage 1: Created
+      // Stage 1: Uploaded
       {
-        title: '1. Created',
-        caption: 'ZIP file received',
+        title: '1. Uploaded',
+        caption: 'File uploaded to the system',
         startedAt: currentStartedAt,
         duration: workflowStage === 1 ? formatDuration(currentStartedAt.toISOString(), now.toISOString()) : '0s',
         status: workflowStepStates.step1 === 'active' ? 'active' : workflowStepStates.step1 === 'completed' ? 'completed' : 'pending',
       },
-      // Stage 2: Uploaded
+      // Stage 2: Scanning
       {
-        title: '2. Uploaded',
-        caption: 'File uploaded to the system',
-        startedAt: currentStartedAt,
-        duration: workflowStage >= 2 ? (workflowStage === 2 ? formatDuration(currentStartedAt.toISOString(), now.toISOString()) : '—') : '—',
+        title: '2. Scanning',
+        caption: 'Scanning the ZIP file contents',
+        startedAt: workflowStage >= 2 ? statusUpdatedAt : undefined,
+        duration: workflowStage >= 2 ? (workflowStage === 2 ? formatDuration(statusUpdatedAt.toISOString(), now.toISOString()) : '—') : '—',
         status: workflowStepStates.step2 === 'active' ? 'active' : workflowStepStates.step2 === 'completed' ? 'completed' : 'pending',
       },
-      // Stage 3: Scanning
+      // Stage 3: AI Analyzing
       {
-        title: '3. Scanning',
-        caption: 'Scanning the ZIP file contents',
+        title: '3. AI Analyzing',
+        caption: 'Running AI analysis on the code',
         startedAt: workflowStage >= 3 ? statusUpdatedAt : undefined,
-        duration: workflowStage >= 3 ? (workflowStage === 3 ? formatDuration(statusUpdatedAt?.toISOString(), now.toISOString()) : '—') : '—',
+        duration: workflowStage >= 3 ? (workflowStage === 3 ? formatDuration(statusUpdatedAt.toISOString(), now.toISOString()) : '—') : '—',
         status: workflowStepStates.step3 === 'active' ? 'active' : workflowStepStates.step3 === 'completed' ? 'completed' : 'pending',
       },
-      // Stage 4: Scan Completed
+      // Stage 4: Metadata Processing
       {
-        title: '4. Scan Completed',
-        caption: 'Scanning process finished',
+        title: '4. Metadata Processing',
+        caption: 'Extracting metadata from the files',
         startedAt: workflowStage >= 4 ? statusUpdatedAt : undefined,
         duration: workflowStage >= 4 ? (workflowStage === 4 ? formatDuration(statusUpdatedAt?.toISOString(), now.toISOString()) : '—') : '—',
         status: workflowStepStates.step4 === 'active' ? 'active' : workflowStepStates.step4 === 'completed' ? 'completed' : 'pending',
       },
-      // Stage 5: MetaData Processing
+      // Stage 5: Document Generating
       {
-        title: '5. MetaData Processing',
-        caption: 'Extracting metadata from the files',
+        title: '5. Document Generating',
+        caption: 'Generating documentation from analysis',
         startedAt: workflowStage >= 5 ? statusUpdatedAt : undefined,
         duration: workflowStage >= 5 ? (workflowStage === 5 ? formatDuration(statusUpdatedAt?.toISOString(), now.toISOString()) : '—') : '—',
         status: workflowStepStates.step5 === 'active' ? 'active' : workflowStepStates.step5 === 'completed' ? 'completed' : 'pending',
       },
-      // Stage 6: MetaData Completed
+      // Stage 6: Completed
       {
-        title: '6. MetaData Completed',
-        caption: 'Metadata extraction completed',
+        title: '6. Completed',
+        caption: 'Workflow completed successfully',
         startedAt: workflowStage >= 6 ? statusUpdatedAt : undefined,
         duration: workflowStage >= 6 ? (workflowStage === 6 ? formatDuration(statusUpdatedAt?.toISOString(), now.toISOString()) : '—') : '—',
         status: workflowStepStates.step6 === 'active' ? 'active' : workflowStepStates.step6 === 'completed' ? 'completed' : 'pending',
       },
-      // Stage 7: AI Analyzing
+      // Stage 7: Failed
       {
-        title: '7. AI Analyzing',
-        caption: 'Running AI analysis on the code',
-        startedAt: workflowStage >= 7 ? statusUpdatedAt : undefined,
-        duration: workflowStage >= 7 ? (workflowStage === 7 ? formatDuration(statusUpdatedAt?.toISOString(), now.toISOString()) : '—') : '—',
-        status: workflowStepStates.step7 === 'active' ? 'active' : workflowStepStates.step7 === 'completed' ? 'completed' : 'pending',
-      },
-      // Stage 8: AI Analysis Completed
-      {
-        title: '8. AI Analysis Completed',
-        caption: 'AI analysis finished',
-        startedAt: workflowStage >= 8 ? statusUpdatedAt : undefined,
-        duration: workflowStage >= 8 ? (workflowStage === 8 ? formatDuration(statusUpdatedAt?.toISOString(), now.toISOString()) : '—') : '—',
-        status: workflowStepStates.step8 === 'active' ? 'active' : workflowStepStates.step8 === 'completed' ? 'completed' : 'pending',
-      },
-      // Stage 9: Document Generating
-      {
-        title: '9. Document Generating',
-        caption: 'Generating documentation from analysis',
-        startedAt: workflowStage >= 9 ? statusUpdatedAt : undefined,
-        duration: workflowStage >= 9 ? (workflowStage === 9 ? formatDuration(statusUpdatedAt?.toISOString(), now.toISOString()) : '—') : '—',
-        status: workflowStepStates.step9 === 'active' ? 'active' : workflowStepStates.step9 === 'completed' ? 'completed' : 'pending',
-      },
-      // Stage 10: Document Completed
-      {
-        title: '10. Document Completed',
-        caption: 'Documentation generation completed',
-        startedAt: workflowStage >= 10 ? statusUpdatedAt : undefined,
-        duration: workflowStage >= 10 ? (workflowStage === 10 ? formatDuration(statusUpdatedAt?.toISOString(), now.toISOString()) : '—') : '—',
-        status: workflowStepStates.step10 === 'active' ? 'active' : workflowStepStates.step10 === 'completed' ? 'completed' : 'pending',
-      },
-      // Stage 11: Completed
-      {
-        title: '11. Completed',
-        caption: 'Workflow completed successfully',
-        startedAt: workflowStage >= 11 ? statusUpdatedAt : undefined,
-        duration: workflowStage >= 11 ? (workflowStage === 11 ? formatDuration(statusUpdatedAt?.toISOString(), now.toISOString()) : '—') : '—',
-        status: workflowStepStates.step11 === 'active' ? 'active' : workflowStepStates.step11 === 'completed' ? 'completed' : 'pending',
-      },
-      // Stage 12: Failed
-      {
-        title: '12. Failed',
+        title: '7. Failed',
         caption: isFailed ? 'The workflow ended with an error' : 'Waiting for the final result',
-        startedAt: workflowStage >= 12 ? statusUpdatedAt : undefined,
+        startedAt: workflowStage >= 7 ? statusUpdatedAt : undefined,
         duration: '—',
-        status: workflowStepStates.step12 === 'failed' ? 'failed' : workflowStepStates.step12 === 'completed' ? 'completed' : 'pending',
+        status: workflowStepStates.step7 === 'failed' ? 'failed' : workflowStepStates.step7 === 'completed' ? 'completed' : 'pending',
       },
     ];
   })();
@@ -459,24 +404,19 @@ const MuleTransform = () => {
   const currentWorkflowStage = getWorkflowStage(submissionState.documentStatus || 'submitted');
 
   const placeholderWorkflowSteps: WorkflowStep[] = [
-    { title: '1. Created', caption: 'ZIP file received', duration: '—', status: 'pending' },
-    { title: '2. Uploaded', caption: 'File uploaded to the system', duration: '—', status: 'pending' },
-    { title: '3. Scanning', caption: 'Scanning the ZIP file contents', duration: '—', status: 'pending' },
-    { title: '4. Scan Completed', caption: 'Scanning process finished', duration: '—', status: 'pending' },
-    { title: '5. MetaData Processing', caption: 'Extracting metadata from the files', duration: '—', status: 'pending' },
-    { title: '6. MetaData Completed', caption: 'Metadata extraction completed', duration: '—', status: 'pending' },
-    { title: '7. AI Analyzing', caption: 'Running AI analysis on the code', duration: '—', status: 'pending' },
-    { title: '8. AI Analysis Completed', caption: 'AI analysis finished', duration: '—', status: 'pending' },
-    { title: '9. Document Generating', caption: 'Generating documentation from analysis', duration: '—', status: 'pending' },
-    { title: '10. Document Completed', caption: 'Documentation generation completed', duration: '—', status: 'pending' },
-    { title: '11. Completed', caption: 'Workflow completed successfully', duration: '—', status: 'pending' },
-    { title: '12. Failed', caption: 'The final state will be added when the workflow finishes', duration: '—', status: 'pending' },
+    { title: '1. Uploaded', caption: 'File uploaded to the system', duration: '—', status: 'pending' },
+    { title: '2. Scanning', caption: 'Scanning the ZIP file contents', duration: '—', status: 'pending' },
+    { title: '3. AI Analyzing', caption: 'Running AI analysis on the code', duration: '—', status: 'pending' },
+    { title: '4. Metadata Processing', caption: 'Extracting metadata from the files', duration: '—', status: 'pending' },
+    { title: '5. Document Generating', caption: 'Generating documentation from analysis', duration: '—', status: 'pending' },
+    { title: '6. Completed', caption: 'Workflow completed successfully', duration: '—', status: 'pending' },
+    { title: '7. Failed', caption: 'The final state will be added when the workflow finishes', duration: '—', status: 'pending' },
   ];
 
   const renderWorkflowTimeline = (steps: WorkflowStep[]) => (
     <div className="d-flex flex-column gap-3" style={{ maxHeight: '60vh', overflowY: 'auto', paddingRight: 6 }}>
       {steps.map((step, index) => {
-        // Stage number corresponds to index + 1 (Stage 1-12)
+        // Stage number corresponds to index + 1.
         const isActive = step.status === 'active';
         const isCompleted = step.status === 'completed';
         const isFailed = step.status === 'failed';
