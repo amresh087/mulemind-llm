@@ -27,6 +27,7 @@ const Transactions = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [tenantFilter, setTenantFilter] = useState('all');
   const [pageSize, setPageSize] = useState(5);
+  const [sortAscending, setSortAscending] = useState(false);
 
   useEffect(() => {
     void loadTransactionHistory();
@@ -167,11 +168,24 @@ const Transactions = () => {
     }).format(date);
   };
 
-  const filteredTransactions = transactions.filter((tx) => {
-    const statusMatches = statusFilter === 'all' || tx.status.toLowerCase() === statusFilter.toLowerCase();
-    const tenantMatches = tenantFilter === 'all' || tx.tenant.toLowerCase() === tenantFilter.toLowerCase();
-    return statusMatches && tenantMatches;
-  });
+  const filteredTransactions = transactions
+    .filter((tx) => {
+      const statusMatches = statusFilter === 'all' || tx.status.toLowerCase() === statusFilter.toLowerCase();
+      const tenantMatches = tenantFilter === 'all' || tx.tenant.toLowerCase() === tenantFilter.toLowerCase();
+      return statusMatches && tenantMatches;
+    })
+    .sort((left, right) => {
+      const leftTime = Date.parse(left.updatedAt);
+      const rightTime = Date.parse(right.updatedAt);
+      const leftSortableTime = Number.isNaN(leftTime) ? Number.NEGATIVE_INFINITY : leftTime;
+      const rightSortableTime = Number.isNaN(rightTime) ? Number.NEGATIVE_INFINITY : rightTime;
+
+      const dateOrder = sortAscending ? leftSortableTime - rightSortableTime : rightSortableTime - leftSortableTime;
+      const idOrder = sortAscending
+        ? left.documentId.localeCompare(right.documentId)
+        : right.documentId.localeCompare(left.documentId);
+      return dateOrder || idOrder;
+    });
 
   const totalPages = Math.max(1, Math.ceil(filteredTransactions.length / pageSize));
   const safePage = Math.min(currentPage, totalPages);
@@ -188,6 +202,7 @@ const Transactions = () => {
     setStatusFilter('all');
     setTenantFilter('all');
     setPageSize(10);
+    setSortAscending(false);
     setCurrentPage(1);
   };
 
@@ -337,6 +352,19 @@ const Transactions = () => {
                 <option value={50}>50</option>
               </Form.Select>
             </div>
+
+            <Button
+              variant="outline-secondary"
+              size="sm"
+              onClick={() => {
+                setSortAscending((ascending) => !ascending);
+                setCurrentPage(1);
+              }}
+              aria-label={`Sort by updated date, ${sortAscending ? 'newest first' : 'oldest first'}`}
+              title="Toggle updated date sorting"
+            >
+              {sortAscending ? 'Oldest first' : 'Newest first'}
+            </Button>
 
             <Button variant="outline-secondary" size="sm" onClick={resetFilters}>
               Clear filters
