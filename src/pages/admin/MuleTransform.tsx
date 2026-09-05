@@ -1,7 +1,7 @@
 import { Card, Button, Row, Col, Form, Alert, Spinner, Modal } from 'react-bootstrap';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { documentService, type JobStatusHistory, type ReportDocument } from '../../services/documentService';
+import { documentService, formatReportFileName, type JobStatusHistory, type ReportDocument } from '../../services/documentService';
 import { tenantService, type TenantRecord } from '../../services/tenantService';
 
 type SubmissionState = {
@@ -698,7 +698,7 @@ const MuleTransform = () => {
             <div className="list-group">
               {reports.map((report) => (
                 <div key={report.fileName} className="list-group-item d-flex align-items-center justify-content-between gap-3">
-                  <span className="fw-semibold text-break">{report.fileName}</span>
+                  <span className="fw-semibold text-break">{formatReportFileName(report.fileName)}</span>
                   <div className="d-flex gap-2 flex-shrink-0">
                     <Button variant="outline-primary" size="sm" onClick={() => void openReport(report.type, false)}>
                       Preview

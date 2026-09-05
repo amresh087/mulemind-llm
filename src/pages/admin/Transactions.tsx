@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Card, Table, Button, Badge, Spinner, Modal, Form } from 'react-bootstrap';
-import { documentService, type ReportDocument } from '../../services/documentService';
+import { documentService, formatReportFileName, type ReportDocument } from '../../services/documentService';
 
 type TransactionHistoryRow = {
   documentId: string;
@@ -476,7 +476,7 @@ const Transactions = () => {
             <div className="list-group">
               {reports.map((report) => (
                 <div key={report.fileName} className="list-group-item d-flex align-items-center justify-content-between gap-3">
-                  <span className="fw-semibold">{report.fileName}</span>
+                  <span className="fw-semibold text-break">{formatReportFileName(report.fileName)}</span>
                   <div className="d-flex gap-2">
                     <Button variant="outline-primary" size="sm" onClick={() => void openReport(reportDocumentId, report.type, false)}>
                       Preview

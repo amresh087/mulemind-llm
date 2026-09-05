@@ -60,6 +60,14 @@ export interface ReportDocument {
   url: string;
 }
 
+export const formatReportFileName = (fileName: string): string => {
+  const extensionIndex = fileName.lastIndexOf('.');
+  const name = extensionIndex > 0 ? fileName.slice(0, extensionIndex) : fileName;
+  const extension = extensionIndex > 0 ? fileName.slice(extensionIndex).toLowerCase() : '';
+
+  return `${name.replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase()}${extension}`;
+};
+
 interface UpdateTransformationJobPayload {
   documentId?: string;
   jobName?: string;
