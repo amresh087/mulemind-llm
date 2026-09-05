@@ -1,7 +1,7 @@
 import { Card, Button, Row, Col, Form, Alert, Spinner, Modal } from 'react-bootstrap';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { documentService } from '../../services/documentService';
+import { documentService, type JobStatusHistory, type ReportDocument } from '../../services/documentService';
 import { tenantService, type TenantRecord } from '../../services/tenantService';
 
 type SubmissionState = {
@@ -31,6 +31,11 @@ const MuleTransform = () => {
   const [error, setError] = useState('');
   const [tenantOptions, setTenantOptions] = useState<TenantRecord[]>([]);
   const [showDocumentsModal, setShowDocumentsModal] = useState(false);
+  const [reports, setReports] = useState<ReportDocument[]>([]);
+  const [reportsLoading, setReportsLoading] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewTitle, setPreviewTitle] = useState('');
+  const [statusHistory, setStatusHistory] = useState<JobStatusHistory[]>([]);
 
   const [submissionState, setSubmissionState] = useState<SubmissionState>({
     status: 'idle',
@@ -124,6 +129,8 @@ const MuleTransform = () => {
     try {
       // API: Poll the backend to get the latest workflow status and artifact payload during transformation
       const jobStatus = await documentService.getTransformationJobStatus(submissionState.transformationId);
+      const history = await documentService.getStatusHistory(submissionState.transformationId);
+      setStatusHistory(history);
       const candidateStatus = jobStatus?.status?.trim() || submissionState.documentStatus || 'Created';
       const recognized = isRecognizedServerStatus(candidateStatus);
       const latestStatus = recognized ? candidateStatus : submissionState.documentStatus || 'Created';
@@ -185,6 +192,57 @@ const MuleTransform = () => {
     setError('');
   };
 
+  const handleOpenReportList = async () => {
+    if (!submissionState.transformationId) return;
+
+    setReportsLoading(true);
+    setError('');
+    try {
+      const reportList = await documentService.listReports(submissionState.transformationId);
+      setReports(reportList);
+      setShowDocumentsModal(true);
+    } catch (err) {
+      console.error('Unable to load completed reports', err);
+      setError('Unable to load completed reports right now.');
+    } finally {
+      setReportsLoading(false);
+    }
+  };
+
+  const openReport = async (reportType: string, download: boolean) => {
+    try {
+      const report = await documentService.getReport(submissionState.transformationId, reportType);
+      const reportUrl = URL.createObjectURL(report);
+      if (download) {
+        const link = document.createElement('a');
+        link.href = reportUrl;
+        link.download = `${submissionState.transformationId}-${reportType}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.setTimeout(() => URL.revokeObjectURL(reportUrl), 60_000);
+      } else {
+        setShowDocumentsModal(false);
+        setPreviewTitle(`${reportType} report`);
+        setPreviewUrl((currentUrl) => {
+          if (currentUrl) URL.revokeObjectURL(currentUrl);
+          return reportUrl;
+        });
+      }
+    } catch (err) {
+      console.error('Unable to open completed report', err);
+      setError(`Unable to ${download ? 'download' : 'preview'} this report right now.`);
+    }
+  };
+
+  const closePreview = () => {
+    setPreviewUrl((currentUrl) => {
+      if (currentUrl) URL.revokeObjectURL(currentUrl);
+      return null;
+    });
+    setShowDocumentsModal(true);
+  };
+
   const handleTransform = async () => {
     if (!selectedTenant || !file) {
       setError('Please select a tenant and EDI file.');
@@ -194,6 +252,7 @@ const MuleTransform = () => {
     setLoading(true);
     setError('');
     setSubmissionState({ status: 'idle', transformationId: '', documentStatus: '', message: '', createdAt: '', updatedAt: '' });
+    setStatusHistory([]);
 
     try {
       const extension = file.name.split('.').pop()?.toLowerCase() ?? 'zip';
@@ -213,6 +272,8 @@ const MuleTransform = () => {
       
       // API: Fetch the initial job status immediately after upload to display current workflow stage
       const jobStatus = await documentService.getTransformationJobStatus(documentId);
+      const history = await documentService.getStatusHistory(documentId);
+      setStatusHistory(history);
       const candidateStatus = jobStatus?.status?.trim() || uploadedDocument.status;
     
       const recognized = isRecognizedServerStatus(candidateStatus);
@@ -335,61 +396,82 @@ const MuleTransform = () => {
     const statusUpdatedAt = parseDate(submissionState.updatedAt) ?? new Date();
     const now = new Date();
 
-    const totalElapsedMs = Math.max(0, now.getTime() - currentStartedAt.getTime());
-    const smallStage2Ms = 30 * 1000;
-    const stage2Duration = workflowStage >= 3 ? Math.min(smallStage2Ms, totalElapsedMs) : undefined;
-    const stage3DurationMs = workflowStage >= 3 ? Math.max(0, totalElapsedMs - (stage2Duration ?? 0)) : undefined;
+    const history = statusHistory
+      .map((entry) => ({
+        stage: getWorkflowStage(entry.statusCode || ''),
+        changedAt: parseDate(entry.changedAt),
+      }))
+      .filter((entry): entry is { stage: number; changedAt: Date } => entry.changedAt !== null)
+      .sort((left, right) => left.changedAt.getTime() - right.changedAt.getTime());
 
-    const stage2DurationLabel = stage2Duration ? (Math.floor(stage2Duration / 1000) + 's') : (workflowStage === 2 ? formatDuration(currentStartedAt.toISOString(), now.toISOString()) : '—');
-    const stage3DurationLabel = stage3DurationMs ? (Math.floor(stage3DurationMs / 1000) + 's') : (workflowStage === 3 ? formatDuration(statusUpdatedAt?.toISOString(), now.toISOString()) : '—');
+    const getStageTiming = (stage: number) => {
+      const stageEntry = history.find((entry) => entry.stage === stage);
+      if (!stageEntry) {
+        return { startedAt: undefined, duration: '—' };
+      }
+
+      const nextEntry = history.find((entry) => entry.changedAt > stageEntry.changedAt);
+      const end = nextEntry?.changedAt ?? (workflowStage === stage ? now : statusUpdatedAt);
+      return {
+        startedAt: stageEntry.changedAt,
+        duration: formatDuration(stageEntry.changedAt.toISOString(), end.toISOString()),
+      };
+    };
+
+    const stage1Timing = getStageTiming(1);
+    const stage2Timing = getStageTiming(2);
+    const stage3Timing = getStageTiming(3);
+    const stage4Timing = getStageTiming(4);
+    const stage5Timing = getStageTiming(5);
+    const stage6Timing = getStageTiming(6);
 
     return [
       // Stage 1: Uploaded
       {
         title: '1. Uploaded',
         caption: 'File uploaded to the system',
-        startedAt: currentStartedAt,
-        duration: workflowStage === 1 ? formatDuration(currentStartedAt.toISOString(), now.toISOString()) : '0s',
+        startedAt: stage1Timing.startedAt ?? currentStartedAt,
+        duration: stage1Timing.startedAt ? stage1Timing.duration : (workflowStage === 1 ? formatDuration(currentStartedAt.toISOString(), now.toISOString()) : '—'),
         status: workflowStepStates.step1 === 'active' ? 'active' : workflowStepStates.step1 === 'completed' ? 'completed' : 'pending',
       },
       // Stage 2: Scanning
       {
         title: '2. Scanning',
         caption: 'Scanning the ZIP file contents',
-        startedAt: workflowStage >= 2 ? statusUpdatedAt : undefined,
-        duration: workflowStage >= 2 ? (workflowStage === 2 ? formatDuration(statusUpdatedAt.toISOString(), now.toISOString()) : '—') : '—',
+        startedAt: stage2Timing.startedAt,
+        duration: stage2Timing.duration,
         status: workflowStepStates.step2 === 'active' ? 'active' : workflowStepStates.step2 === 'completed' ? 'completed' : 'pending',
       },
       // Stage 3: AI Analyzing
       {
         title: '3. AI Analyzing',
         caption: 'Running AI analysis on the code',
-        startedAt: workflowStage >= 3 ? statusUpdatedAt : undefined,
-        duration: workflowStage >= 3 ? (workflowStage === 3 ? formatDuration(statusUpdatedAt.toISOString(), now.toISOString()) : '—') : '—',
+        startedAt: stage3Timing.startedAt,
+        duration: stage3Timing.duration,
         status: workflowStepStates.step3 === 'active' ? 'active' : workflowStepStates.step3 === 'completed' ? 'completed' : 'pending',
       },
       // Stage 4: Metadata Processing
       {
         title: '4. Metadata Processing',
         caption: 'Extracting metadata from the files',
-        startedAt: workflowStage >= 4 ? statusUpdatedAt : undefined,
-        duration: workflowStage >= 4 ? (workflowStage === 4 ? formatDuration(statusUpdatedAt?.toISOString(), now.toISOString()) : '—') : '—',
+        startedAt: stage4Timing.startedAt,
+        duration: stage4Timing.duration,
         status: workflowStepStates.step4 === 'active' ? 'active' : workflowStepStates.step4 === 'completed' ? 'completed' : 'pending',
       },
       // Stage 5: Document Generating
       {
         title: '5. Document Generating',
         caption: 'Generating documentation from analysis',
-        startedAt: workflowStage >= 5 ? statusUpdatedAt : undefined,
-        duration: workflowStage >= 5 ? (workflowStage === 5 ? formatDuration(statusUpdatedAt?.toISOString(), now.toISOString()) : '—') : '—',
+        startedAt: stage5Timing.startedAt,
+        duration: stage5Timing.duration,
         status: workflowStepStates.step5 === 'active' ? 'active' : workflowStepStates.step5 === 'completed' ? 'completed' : 'pending',
       },
       // Stage 6: Completed
       {
         title: '6. Completed',
         caption: 'Workflow completed successfully',
-        startedAt: workflowStage >= 6 ? statusUpdatedAt : undefined,
-        duration: workflowStage >= 6 ? (workflowStage === 6 ? formatDuration(statusUpdatedAt?.toISOString(), now.toISOString()) : '—') : '—',
+        startedAt: stage6Timing.startedAt,
+        duration: stage6Timing.duration,
         status: workflowStepStates.step6 === 'active' ? 'active' : workflowStepStates.step6 === 'completed' ? 'completed' : 'pending',
       },
       // Stage 7: Failed
@@ -440,8 +522,8 @@ const MuleTransform = () => {
                   {isActive && <Spinner animation="border" size="sm" className="me-2" />}
                   <span>{step.title}</span>
                   {step.title.startsWith('6.') && isCompleted && (
-                    <Button variant="success" size="sm" className="ms-3" onClick={() => setShowDocumentsModal(true)}>
-                      📄 Documents
+                    <Button variant="success" size="sm" className="ms-3" onClick={() => void handleOpenReportList()} disabled={reportsLoading}>
+                      {reportsLoading ? <Spinner animation="border" size="sm" /> : '📄 Documents'}
                     </Button>
                   )}
                 </div>
@@ -607,35 +689,44 @@ const MuleTransform = () => {
         </Col>
       </Row>
 
-      <Modal show={showDocumentsModal} onHide={() => setShowDocumentsModal(false)} centered>
+      <Modal show={showDocumentsModal} onHide={() => setShowDocumentsModal(false)} size="lg" centered>
         <Modal.Header closeButton>
-          <Modal.Title>Completed document</Modal.Title>
+          <Modal.Title>Completed documents</Modal.Title>
         </Modal.Header>
-        <Modal.Body>
-          <div className="d-flex flex-column gap-3">
-            <div>
-              <div className="text-uppercase small text-muted">Transformation ID</div>
-              <div className="fw-semibold text-break">{submissionState.transformationId || '—'}</div>
+        <Modal.Body style={{ minHeight: '45vh', maxHeight: '65vh', overflowY: 'auto' }}>
+          {reports.length > 0 ? (
+            <div className="list-group">
+              {reports.map((report) => (
+                <div key={report.fileName} className="list-group-item d-flex align-items-center justify-content-between gap-3">
+                  <span className="fw-semibold text-break">{report.fileName}</span>
+                  <div className="d-flex gap-2 flex-shrink-0">
+                    <Button variant="outline-primary" size="sm" onClick={() => void openReport(report.type, false)}>
+                      Preview
+                    </Button>
+                    <Button variant="outline-secondary" size="sm" onClick={() => void openReport(report.type, true)}>
+                      Download
+                    </Button>
+                  </div>
+                </div>
+              ))}
             </div>
-            <div>
-              <div className="text-uppercase small text-muted">Status</div>
-              <div className="fw-semibold">{submissionState.documentStatus || 'Completed'}</div>
-            </div>
-            <div>
-              <div className="text-uppercase small text-muted">Completed at</div>
-              <div>{formatDateTime(submissionState.updatedAt)}</div>
-            </div>
-            <div className="alert alert-success mb-0">
-              {submissionState.message || 'The document transformation completed successfully.'}
-            </div>
-          </div>
+          ) : (
+            <div className="text-muted">No completed reports are available.</div>
+          )}
         </Modal.Body>
         <Modal.Footer>
           <Button variant="secondary" onClick={() => setShowDocumentsModal(false)}>Close</Button>
-          <Link to="/admin/transactions" className="btn btn-primary" onClick={() => setShowDocumentsModal(false)}>
-            View all documents
-          </Link>
+          <Link to="/admin/transactions" className="btn btn-primary" onClick={() => setShowDocumentsModal(false)}>View all documents</Link>
         </Modal.Footer>
+      </Modal>
+
+      <Modal show={Boolean(previewUrl)} onHide={closePreview} size="xl" centered>
+        <Modal.Header closeButton>
+          <Modal.Title>{previewTitle}</Modal.Title>
+        </Modal.Header>
+        <Modal.Body className="p-0" style={{ height: '80vh' }}>
+          {previewUrl && <iframe title={previewTitle} src={previewUrl} style={{ width: '100%', height: '100%', border: 0 }} />}
+        </Modal.Body>
       </Modal>
 
     </div>

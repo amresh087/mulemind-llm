@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Card, Table, Button, Badge, Spinner, Modal, Form, Pagination } from 'react-bootstrap';
+import { Card, Table, Button, Badge, Spinner, Modal, Form } from 'react-bootstrap';
 import { documentService, type ReportDocument } from '../../services/documentService';
 
 type TransactionHistoryRow = {
@@ -412,17 +412,29 @@ const Transactions = () => {
                 ? `Showing ${startIndex + 1}-${Math.min(startIndex + pageSize, filteredTransactions.length)} of ${filteredTransactions.length} transactions`
                 : 'Showing 0 transactions'}
             </span>
-            <Pagination size="sm" className="transactions-pagination" aria-label="Transactions pages">
-              <Pagination.First onClick={() => setCurrentPage(1)} disabled={safePage === 1 || filteredTransactions.length === 0} />
-              <Pagination.Prev onClick={() => setCurrentPage((page) => Math.max(1, page - 1))} disabled={safePage === 1 || filteredTransactions.length === 0} />
-              {Array.from({ length: totalPages }, (_, index) => index + 1).map((page) => (
-                <Pagination.Item key={page} active={page === safePage} onClick={() => setCurrentPage(page)} disabled={filteredTransactions.length === 0}>
-                  {page}
-                </Pagination.Item>
-              ))}
-              <Pagination.Next onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))} disabled={safePage === totalPages || filteredTransactions.length === 0} />
-              <Pagination.Last onClick={() => setCurrentPage(totalPages)} disabled={safePage === totalPages || filteredTransactions.length === 0} />
-            </Pagination>
+            {filteredTransactions.length > pageSize && (
+              <div className="d-flex justify-content-between align-items-center mt-3 pt-2 border-top">
+                <small className="text-muted">Page {safePage} of {totalPages}</small>
+                <div className="d-flex gap-2">
+                  <Button
+                    variant="outline-secondary"
+                    size="sm"
+                    disabled={safePage === 1}
+                    onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+                  >
+                    Prev
+                  </Button>
+                  <Button
+                    variant="outline-secondary"
+                    size="sm"
+                    disabled={safePage === totalPages}
+                    onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+                  >
+                    Next
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         </Card.Footer>
       </Card>

@@ -49,6 +49,11 @@ export interface TransformationJobStatus {
   updatedAt?: string;
 }
 
+export interface JobStatusHistory {
+  statusCode?: string;
+  changedAt?: string;
+}
+
 export interface ReportDocument {
   type: string;
   fileName: string;
@@ -133,6 +138,11 @@ export const documentService = {
       }
       throw error;
     }
+  },
+
+  getStatusHistory: async (documentId: string): Promise<JobStatusHistory[]> => {
+    const response = await api.get<JobStatusHistory[]>(`/documents/jobs/${encodeURIComponent(documentId)}/status-history`);
+    return Array.isArray(response.data) ? response.data : [];
   },
 
   getTransactionXml: async (documentId: string, xmlType: 'edixml' | 'idocxml'): Promise<string> => {
